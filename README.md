@@ -64,7 +64,7 @@ BAYYINAH_INDEX_KEY=<64 hex characters>
 
 Optional: `OPENAI_MODEL` (default `gpt-5.4-mini`) and `OPENAI_EMBED_MODEL` (default `text-embedding-3-small`). Never commit `.env.local`; it is gitignored.
 
-Add the approved files to `sources/` and write `sources/manifest.json`, then:
+A fresh clone already contains the Quran, Al-Muyassar, `sources/manifest.json`, the embeddings and the encrypted book bundle, so it runs as is; the books are searched only when `BAYYINAH_INDEX_KEY` is set. To rebuild the index from the source files (the book PDFs are not in this repo), put the approved files in `sources/`, then:
 
 ```bash
 npm run ingest:check
@@ -98,12 +98,26 @@ npm run test:questions
 
 Runs the 10 Arabic questions in `tests/questions.json` against the API (default `http://localhost:3000`; pass another base URL as an argument, e.g. the deployed site). Each question states whether Bayyinah should answer or abstain and which references must be retrieved. The script prints a pass/fail table, saves `tests/results.json` (shown on `/evaluation`), and prints the exact stored text of Surah An-Nahl 16:125.
 
+## Evaluation results
+
+Latest run (2026-10-06, local, `gpt-5.4-mini`, all live sources except hadith, since the test script calls the API directly and Dorar is searched by the browser). Live on https://bayyinah-henna.vercel.app/evaluation.
+
+| Measure | Result |
+| --- | --- |
+| Questions passed (decision, retrieval and verification all correct) | 8 / 10 |
+| Correct decision to answer or abstain | 10 / 10 (100%) |
+| Displayed answers with every claim verified by code and by the second model | 100% |
+| Retrieval hit rate (expected references found) | 71% |
+| Median time per question | 12.2 s |
+
+The three abstention cases (a question with no evidence in the library, a personal fatwa, a judgment on a group) all abstained. The two failures answered with verified claims but did not retrieve the specific expected passage. Model output varies between runs; a claim that fails verification is never shown.
+
 ## Deployment
 
-Vercel, from the `main` branch. Set `OPENAI_API_KEY` and `BAYYINAH_INDEX_KEY` in the project's environment variables. The API route reads `sources/` and `data/` at runtime; `next.config.ts` includes them in the function bundle with `outputFileTracingIncludes`.
+Vercel, from the `main` branch. Set `OPENAI_API_KEY` and `BAYYINAH_INDEX_KEY` in the project's environment variables. The API routes read `sources/` and `data/` at runtime; `next.config.ts` includes them in the function bundle with `outputFileTracingIncludes`.
 
 ## Licenses
 
 - Fonts: IBM Plex Sans Arabic, Amiri and Amiri Quran, all under the SIL Open Font License 1.1, downloaded at build time by `next/font` and served from this site.
-- Sources: each under its own license, listed above once confirmed.
+- Sources: each under its own license and attribution, as listed in the Sources table above, on `/sources`, and in the site footer.
 - AI tools, skills and models used to build Bayyinah: [docs/TOOLS.md](docs/TOOLS.md).
