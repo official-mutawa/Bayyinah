@@ -1,4 +1,4 @@
-Used for its polish and audit guidance only (reference files `polish.md` and `audit.md`, read directly; launcher, scripts and hooks not used): token contrast check in both themes, 44px touch targets, no overflow at 320px, long-reference chip wrapping. |Used for a review pass on the working UI (mock data): merged a duplicated "draft" label into the heading, removed a card around the stage list, removed a nested card in the abstain state. |Used while building the UI: native `<dialog>` and `<details>`, visible focus, labelled textarea with described errors, polite live region for stages, focus return, 44px targets, reduced-motion guards. |Used while building the UI: concentric radii, 1.5px currentColor icons, transitions only on the changing property, scale 0.96 on press. |Used while building the UI: small type scale, 16px input, line-height by role, balanced and pretty wrapping, tabular numbers, `<bdi>` for model names. |Used while building the UI: grouping by space, logical properties for RTL, inset full-width buttons, mobile-first widths. |# AI tools, skills and models
+# AI tools, skills and models
 
 Every AI tool, skill and model used in this project, as required by the challenge rules.
 
@@ -6,7 +6,7 @@ Every AI tool, skill and model used in this project, as required by the challeng
 
 | Name | Source | License | Used for |
 | --- | --- | --- | --- |
-| Claude Code (desktop app, Code tab) | https://claude.com/claude-code | Anthropic Commercial Terms | Coding agent: cloned the repo, scaffolded the Next.js app, set up the Arabic RTL layout, wrote project rules and this file |
+| Claude Code (desktop app, Code tab) | https://claude.com/claude-code | Anthropic Commercial Terms | Coding agent that wrote the application code under the author's direction: Next.js app and Arabic RTL UI, retrieval and verification pipeline, source adapters and ingest checks, rule-based PDF text extraction (`pdftotext`, no model touches religious text), tests, README and this file |
 | Claude Opus 5.5 (`claude-opus-5-5`) | https://www.anthropic.com/claude | Anthropic Commercial Terms | Model behind Claude Code for all of the above |
 
 ## Models inside the app (runtime)
@@ -50,4 +50,4 @@ Installed at user level (`~/.claude/skills`) on 2026-10-04, not inside this repo
 | interface-review | https://github.com/jakubkrehel/skills (`skills/interface-review`, commit `267330e`) | MIT | Not used: it can only be started by the user (`/interface-review`). |
 | no-ai-design-slop | https://github.com/MengTo/Skills (`agent-skills/ui/no-ai-design-slop`, commit `944d578`) | MIT | Two review passes on the working UI (mock data). First: merged a duplicated "draft" label into the heading, removed the card around the stage list, removed a nested card in the abstain state. Second (home redesign): kept the arch, lattice and floating library as product-specific; removed the leftover footer band. |
 | review-animations | https://github.com/emilkowalski/skills (`skills/review-animations`, commit `e8a175d`) | MIT | Not used: it can only be started by the user (`/review-animations`). |
-| improve-animations | https://github.com/emilkowalski/skills (`skills/improve-animations`, commit `e8a175d`) | MIT | Improving motion within the project's calm-motion rule. Installed, not used yet. |
+| improve-animations | https://github.com/emilkowalski/skills (`skills/improve-animations`, commit `e8a175d`) | MIT | Not used. |

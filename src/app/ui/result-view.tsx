@@ -30,7 +30,7 @@ function CitationChip({ passage, onOpen }: { passage: RetrievedPassage; onOpen: 
       type="button"
       onClick={(e) => onOpen(e.currentTarget)}
       className="press inline-block min-h-11 max-w-full rounded-[1.375rem] border border-line bg-paper px-3.5 py-2.5 text-start text-[0.9375rem] leading-snug text-primary hover:border-gold"
-      aria-label={`عرض نص ${KIND_SHORT[passage.kind]}: ${passage.refLabel}`}
+      aria-label={`عرض المصدر (${KIND_SHORT[passage.kind]}): ${passage.refLabel}`}
     >
       <span className="font-semibold">{KIND_SHORT[passage.kind]}</span>
       <span aria-hidden="true" className="mx-1.5 text-gold">
