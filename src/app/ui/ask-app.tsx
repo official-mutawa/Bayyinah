@@ -246,7 +246,7 @@ export function AskApp() {
       <SiteHeader showBrand={!idle} />
       <main className="mx-auto w-full max-w-2xl px-4">
         {idle ? <HomeHero /> : <h1 className="sr-only">بيّنة</h1>}
-        <div className={`flex flex-col gap-6 ${idle ? "relative z-10 -mt-12 sm:-mt-16" : "mt-2"}`}>
+        <div className={`flex flex-col gap-6 ${idle ? "relative z-10" : "mt-2"}`}>
           <div>
             <form
               noValidate

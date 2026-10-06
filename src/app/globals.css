@@ -43,10 +43,13 @@ body {
   color: var(--ink);
 }
 
-h1,
-h2,
-h3 {
-  font-family: var(--font-heading);
+/* In the base layer, so a utility such as font-sans can override it (the «بيّنة» wordmark). */
+@layer base {
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
 }
 
 :focus-visible {
