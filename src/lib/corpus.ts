@@ -197,6 +197,7 @@ export function loadCorpus(options: { verifyHashes?: boolean } = {}): {
         page: r.page,
         verses: r.verses,
         authorStart: r.authorStart,
+        ocr: s.ocr || undefined,
         text: r.text,
         grade: r.grade ?? null,
       });

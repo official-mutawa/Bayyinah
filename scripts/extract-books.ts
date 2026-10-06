@@ -4,7 +4,7 @@
 // Usage: node scripts/extract-books.ts "<folder with the PDFs>"
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { arabicDigits } from "../src/lib/arabic.ts";
@@ -130,14 +130,93 @@ function byPage(file: string, short: string, titleLine: RegExp): Chunk[] {
   return chunks;
 }
 
+// ---------- OCR books: raw Tesseract pages -> one passage per PDF page (mechanical cleanup only) ----------
+
+function arabicRatio(s: string): number {
+  const letters = s.replace(/\s/g, "");
+  if (!letters) return 0;
+  return (letters.match(/[ء-ي٠-٩]/g) ?? []).length / letters.length;
+}
+
+/** Share of Arabic letters carrying a diacritic: verse text is fully voweled, prose is not. */
+function diacriticRatio(s: string): number {
+  const letters = (s.match(/[ء-ي]/g) ?? []).length;
+  if (letters < 8) return 0;
+  return (s.match(/[ً-ْٰ]/g) ?? []).length / letters;
+}
+
+const VERSE_MARK = "[آية]";
+
+/**
+ * OCR of Quran verses (ornate, fully voweled type) is unreliable, and verses must come only from
+ * the Quran source. Mechanically replace fully voweled lines and quoted segments with a marker.
+ */
+function maskVerses(line: string): string {
+  // Garbled verse lines: fully voweled, or voweled and mixed with stray digits/symbols (verse-number
+  // circles read as "(1)", "©", "#", "|").
+  const r = diacriticRatio(line);
+  const junk = line.split(/\s+/).filter((t) => /[0-9©#|+<>]/.test(t)).length;
+  if (r >= 0.45 || (r >= 0.2 && junk >= 2)) return VERSE_MARK;
+  return line.replace(/[«﴿(][^«»﴿﴾()]{6,}[»﴾)]/g, (seg) => (diacriticRatio(seg) >= 0.45 ? VERSE_MARK : seg));
+}
+
+function ocrBook(id: string, short: string): Chunk[] {
+  const dir = path.join("sources", "ocr", id);
+  const files = existsSync(dir) ? readdirSync(dir).filter((f) => /^p\d{4}\.txt$/.test(f)).sort() : [];
+  const pages = files.map((f) => ({ n: Number(f.slice(1, 5)), lines: readFileSync(path.join(dir, f), "utf8").split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()) }));
+  // Running headers: short lines that open many pages.
+  const freq = new Map<string, number>();
+  for (const p of pages) for (const l of p.lines.filter(Boolean).slice(0, 2)) freq.set(l, (freq.get(l) ?? 0) + 1);
+  const headers = new Set([...freq].filter(([l, c]) => c >= Math.max(3, pages.length * 0.1) && l.length < 60).map(([l]) => l));
+  const chunks: Chunk[] = [];
+  let section = "";
+  for (const p of pages) {
+    const paras: string[][] = [[]];
+    const firstLine = p.lines.findIndex((l) => l);
+    for (const [i, l] of p.lines.entries()) {
+      // Running header that carries the page number (OCR varies it, so frequency misses it).
+      if (i === firstLine && l.length < 70 && /[0-9٠-٩]/.test(l)) continue;
+      if (!l) {
+        if (paras[paras.length - 1].length) paras.push([]);
+        continue;
+      }
+      if (headers.has(l)) continue; // running header
+      if (/^[\s\-–_.()0-9٠-٩]*$/.test(l)) continue; // page number or rule
+      if (l.length < 3 || arabicRatio(l) < 0.5) continue; // OCR junk (images, broken footnote marks)
+      if (l.length < 45 && /[:：]$/.test(l)) section = l.replace(/[:：]$/, "").trim();
+      const masked = maskVerses(l);
+      const para = paras[paras.length - 1];
+      if (masked === VERSE_MARK && para[para.length - 1] === VERSE_MARK) continue; // one marker per verse block
+      para.push(masked);
+    }
+    const text = paras.filter((x) => x.length).map((x) => x.join(" ")).join("\n");
+    if (text.replace(/[^ء-ي]/g, "").length < 120) continue;
+    chunks.push({
+      key: String(p.n),
+      number: String(p.n),
+      page: p.n,
+      text,
+      refLabel: `${short}${section ? `، ${section}` : ""}، صفحة الملف ${arabicDigits(p.n)}`,
+    });
+  }
+  return chunks;
+}
+
 const jobs: [string, string, () => Chunk[]][] = [
   ["bayyinat", "بينات-اسئله واجوبه عن الاسلام.pdf", () => bayyinat("بينات-اسئله واجوبه عن الاسلام.pdf")],
   ["usoul-eman", "UsoulEman-Arabic.pdf", () => byPage("UsoulEman-Arabic.pdf", "أصول الإيمان", /^أصول الإيمان في ضوء الكتاب والسنة$/)],
+  ["lateef-mannan", "تفسير اللطيف المنان-تفسير قران.pdf (OCR)", () => ocrBook("lateef-mannan", "تيسير اللطيف المنان")],
+  ["shumoo-nahar", "شموع-النهار.pdf (OCR)", () => ocrBook("shumoo-nahar", "شموع النهار")],
+  ["raheeq", "الرحيق المختوم .pdf (OCR)", () => ocrBook("raheeq", "الرحيق المختوم")],
+  ["barahin", "براهين وجود الله.pdf (OCR)", () => ocrBook("barahin", "براهين وجود الله")],
 ];
+const onlyIds = new Set(process.argv.slice(3));
 
 for (const [id, file, run] of jobs) {
+  if (onlyIds.size && !onlyIds.has(id)) continue;
   const chunks = run();
-  writeFileSync(path.join("sources", `${id}.chunks.json`), JSON.stringify({ source: file, extractedWith: "pdftotext (text layer)", chunks }));
+  const extractedWith = file.endsWith("(OCR)") ? "Tesseract OCR 5.4 (ara), mechanical cleanup only" : "pdftotext (text layer)";
+  writeFileSync(path.join("sources", `${id}.chunks.json`), JSON.stringify({ source: file, extractedWith, chunks }));
   const lens = chunks.map((c) => c.text.length).sort((a, b) => a - b);
   console.log(`${id}: ${chunks.length} passages, median ${lens[lens.length >> 1]} chars, max ${lens[lens.length - 1]}`);
 }

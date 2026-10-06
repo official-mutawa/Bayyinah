@@ -18,6 +18,12 @@ Called through the OpenAI REST API with `fetch` (no SDK). Model names come from 
 | OpenAI `gpt-5.4-mini` (default `OPENAI_MODEL`) | https://platform.openai.com/docs/models | OpenAI Services Agreement | Rewriting the question into 2-3 Arabic search queries; drafting the answer from retrieved passages only (strict JSON Schema); the second, independent check of every claim against its cited passages |
 | OpenAI `text-embedding-3-small`, 256 dimensions (default `OPENAI_EMBED_MODEL`) | https://platform.openai.com/docs/guides/embeddings | OpenAI Services Agreement | Meaning search: passage embeddings precomputed by the ingest script, query embeddings at request time |
 
+## OCR (text extraction, not generation)
+
+| Name | Source | License | Used for |
+| --- | --- | --- | --- |
+| Tesseract OCR 5.4 (LSTM engine), Windows build by UB Mannheim, with the Arabic model `ara.traineddata` | https://github.com/tesseract-ocr/tesseract, https://github.com/UB-Mannheim/tesseract, https://github.com/tesseract-ocr/tessdata | Apache-2.0 | Reading the scanned or broken-encoding books (شموع النهار، الرحيق المختوم، براهين وجود الله) page by page. Output is kept as is, with only mechanical cleanup (headers, page numbers, junk lines, line joins, and fully voweled verse lines replaced by «[آية]»). No language model rewrites or completes the text. Pages were rendered with Windows' built-in PDF renderer (`Windows.Data.Pdf`). |
+
 ## AI-generated media
 
 | Name | Source | License | Used for |

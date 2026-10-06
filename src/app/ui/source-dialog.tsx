@@ -53,6 +53,7 @@ export function SourceDialog({ open, onClose }: { open: OpenSource | null; onClo
               <div className="mt-2">
                 <EvidenceTag kind={p.kind} grade={p.grade} />
               </div>
+              {p.ocr && <p className="mt-2 text-sm text-gold-ink">نص مستخرج آليًا من صورة الصفحة (صفحة الملف {p.page})، وقد يحوي أخطاء قراءة.</p>}
             </div>
             <button
               type="button"

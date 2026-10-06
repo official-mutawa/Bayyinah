@@ -78,6 +78,7 @@ function Evidence({ claim, byId }: { claim: ClaimResult; byId: Map<string, Retri
             <figcaption className="mt-1 text-sm text-muted">
               {p.refLabel}
               {p.kind === "hadith" && p.grade ? ` — ${p.grade}` : ""}
+              {p.ocr && <span className="block text-xs">نص مستخرج آليًا من صورة الصفحة</span>}
             </figcaption>
           </figure>
         );

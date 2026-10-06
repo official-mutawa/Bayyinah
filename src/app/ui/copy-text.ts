@@ -20,7 +20,8 @@ export function buildCopyText(result: AskResult): string {
       } else if (claim.match.passage_id === id) {
         const quote = excerptText(excerptAround(p.text, claim.match.start, claim.match.end));
         const grade = p.kind === "hadith" && p.grade ? ` — ${p.grade}` : "";
-        lines.push(`«${quote}» (${p.refLabel}${grade})`);
+        const ocr = p.ocr ? "، نص مستخرج آليًا من صورة الصفحة" : "";
+        lines.push(`«${quote}» (${p.refLabel}${grade}${ocr})`);
       } else {
         lines.push(`(${p.refLabel})`);
       }

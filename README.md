@@ -40,8 +40,13 @@ Sources come only from the approved source plan (the challenge's official scient
 | الدرر السنية: الموسوعة الحديثية | Official public API (JSONP), https://dorar.net/article/389 | Live hadith search from the user's browser, with the muhaddith ruling and source exactly as returned (8 s timeout, cached) | No data stored |
 | بينات: أسئلة وأجوبة عن الإسلام (Osoul Center) | Official challenge package, PDF text layer | One passage per question (236 of 263 questions detected); quotes must come from the author's answer, not the question | No: encrypted bundle only |
 | أصول الإيمان في ضوء الكتاب والسنة | Official challenge package, PDF text layer | One passage per page, with chapter and page | No: encrypted bundle only |
+| شموع النهار | Official challenge package, OCR (Tesseract 5.4, Arabic) because the PDF text layer has a broken font encoding | One passage per PDF page (274), cited by PDF page number and labelled «نص مستخرج آليًا من صورة الصفحة» | No: encrypted bundle only |
 
-Not included yet because they need OCR, which has not been run: تفسير اللطيف المنان and شموع النهار (broken font encoding in the PDF text layer), الرحيق المختوم and براهين وجود الله (scanned pages).
+**OCR books.** Pages are rendered with Windows' built-in PDF renderer, read by Tesseract as one text block, and kept as read: only mechanical cleanup (running headers, page numbers, junk lines, line joins). Fully voweled verse lines are replaced with «[آية]», because OCR of verse type is unreliable and verse text must come only from the Quran source. No language model rewrites or completes the text. Spot checks against the page images: about 97% of characters correct, with a few dropped lines per page and garbled Latin names. Page numbers for OCR books are PDF file pages.
+
+Not included:
+- تيسير اللطيف المنان (السعدي): OCR was run, but its verses, set in ornate Mushaf type and woven into the prose, come out corrupted and cannot be separated mechanically with confidence, so the book is excluded to avoid displaying distorted Quran text.
+- الرحيق المختوم and براهين وجود الله: scanned pages; OCR in progress, to be added after review.
 
 **Private books on the live site.** Copyrighted book texts are never committed. The ingest script encrypts their passages (AES-256-GCM) into `data/private.enc`; the key is `BAYYINAH_INDEX_KEY`, kept only in `.env.local` and in the Vercel environment variables. Without the key the site still works on the Quran, tafsir and hadith.
 

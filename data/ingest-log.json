@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-06T19:00:02.319Z",
-  "total": 12963,
+  "checkedAt": "2026-10-06T21:48:08.481Z",
+  "total": 13237,
   "sources": [
     {
       "id": "quran",
@@ -33,6 +33,14 @@
       "count": 255,
       "sha256": "5ce8ad10803ec311480553ba37bba0cd8cfaff35cecc9d52ed9e5f33db12d1e6",
       "version": "PDF من الحقيبة العلمية، استخراج من طبقة النص"
+    },
+    {
+      "id": "shumoo-nahar",
+      "label": "شموع النهار",
+      "kind": "text",
+      "count": 274,
+      "sha256": "3d9d02d9376bfcac2deafcb987c3fccb5e93ba19548eb0362accb6eb681eeb5a",
+      "version": "PDF من الحقيبة العلمية، استخراج ضوئي (Tesseract OCR 5.4، العربية) بتنظيف آلي فقط"
     }
   ]
 }
