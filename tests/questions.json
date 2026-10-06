@@ -1,92 +1,54 @@
 {
-  "note": "Each question states whether Bayyinah should answer or abstain. must_retrieve is a list of groups: every group must have at least one of its passage ids in the retrieved set. Quran references (quran:surah:ayah) are edition-independent. Hadith and book references are added once the approved sources and their numbering are confirmed (see pending_refs).",
+  "note": "Each question states whether Bayyinah should answer or abstain. must_retrieve is a list of groups: every group must have at least one of its passage ids in the retrieved set (a group lists equivalent evidence, e.g. a verse and its tafsir). Ids: quran:<surah>:<ayah>, muyassar:<surah>:<ayah>, bayyinat:<question number>.",
   "questions": [
     {
       "id": "q01",
       "category": "direct",
       "question": "ما الدليل على أن الدعوة إلى الله تكون بالحكمة والموعظة الحسنة؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:16:125"
-        ]
-      ]
+      "must_retrieve": [["quran:16:125", "muyassar:16:125"]]
     },
     {
       "id": "q02",
       "category": "different wording from the source",
       "question": "هل يُجبَر أحد على اعتناق الإسلام بالقوة؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:2:256"
-        ]
-      ]
+      "must_retrieve": [["quran:2:256", "muyassar:2:256"]]
     },
     {
       "id": "q03",
       "category": "needs two sources",
-      "question": "كيف يعامل المسلم والديه إذا كانا غير مسلمين؟",
+      "question": "يقول لي: الإسلام انتشر بالسيف وأكره الناس عليه. بماذا أرد؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:31:15",
-          "quran:29:8"
-        ]
-      ],
-      "pending_refs": [
-        "hadith group: to be mapped to the approved collection"
-      ]
+      "must_retrieve": [["bayyinat:229"], ["quran:2:256", "muyassar:2:256"]]
     },
     {
       "id": "q04",
       "category": "compound",
-      "question": "هل يأمر الإسلام بالعدل حتى مع من نبغضهم؟ وهل حرّم الله الظلم؟",
+      "question": "لماذا خلق الله الشر؟ وهل يتعارض ذلك مع رحمته؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:5:8"
-        ]
-      ],
-      "pending_refs": [
-        "hadith group: to be mapped to the approved collection"
-      ]
+      "must_retrieve": [["bayyinat:174", "bayyinat:224"]]
     },
     {
       "id": "q05",
       "category": "different wording from the source",
       "question": "لماذا خلق الله البشر؟ ما الغاية من وجودنا؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:51:56"
-        ]
-      ]
+      "must_retrieve": [["quran:51:56", "muyassar:51:56"]]
     },
     {
       "id": "q06",
-      "category": "direct (hadith)",
-      "question": "ما جزاء الصدق وما عاقبة الكذب؟",
+      "category": "direct (book)",
+      "question": "كيف نثق بصحيح البخاري مع وجود اختلافات بين نسخه ورواياته؟",
       "expect": "answer",
-      "must_retrieve": [],
-      "pending_refs": [
-        "hadith group: to be mapped to the approved collection"
-      ]
+      "must_retrieve": [["bayyinat:147", "bayyinat:143", "bayyinat:146"]]
     },
     {
       "id": "q07",
       "category": "different wording from the source",
-      "question": "هل يُعاقَب الإنسان على ذنوب غيره من الناس؟",
+      "question": "هل في فطرة الإنسان ما يدل على وجود خالق؟",
       "expect": "answer",
-      "must_retrieve": [
-        [
-          "quran:6:164",
-          "quran:17:15",
-          "quran:35:18",
-          "quran:39:7",
-          "quran:53:38"
-        ]
-      ]
+      "must_retrieve": [["bayyinat:2"]]
     },
     {
       "id": "q08",

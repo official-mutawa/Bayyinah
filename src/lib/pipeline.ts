@@ -2,7 +2,8 @@
 
 import { BM25 } from "./bm25.ts";
 import { findQuote, normalizeMapped } from "./arabic.ts";
-import { loadCorpus } from "./corpus.ts";
+import { loadCorpus, loadManifest, sourceGroup } from "./corpus.ts";
+import { searchDorar } from "./dorar.ts";
 import type { Passage, PassageKind } from "./corpus.ts";
 import { chatModel, embed, embedModel, structuredResponse } from "./openai.ts";
 import { VectorStore } from "./vectors.ts";
@@ -22,8 +23,10 @@ export type PipelineEvent =
       type: "stage";
       stage: StageId;
       state: "active" | "done";
-      /** For "search": which source is being searched */
+      /** For "search": which source group is being searched */
       source?: StageSource;
+      /** Shown instead of a count when a source could not be reached */
+      note?: string;
       queries?: string[];
       count?: number;
       passed?: number;
@@ -80,28 +83,38 @@ interface SourceIndex extends StageSource {
 
 interface Index {
   byId: Map<string, Passage>;
+  /** 5-word skeleton windows of every Quran verse */
+  quranWindows: Set<string>;
+  hasDorar: boolean;
   /** One searchable part per source, Quran first, then hadith, then other texts */
   sources: SourceIndex[];
   vectors: VectorStore;
 }
 
-const KIND_ORDER: Record<PassageKind, number> = { quran: 0, hadith: 1, text: 2 };
+const KIND_ORDER: Record<PassageKind, number> = { quran: 0, tafsir: 1, hadith: 2, text: 3 };
 
 let indexPromise: Promise<Index> | null = null;
 
 export function getIndex(): Promise<Index> {
   indexPromise ??= Promise.resolve().then(() => {
     const { passages, sources } = loadCorpus();
+    const quranWindows = new Set<string>();
+    for (const p of passages) if (p.kind === "quran") for (const w of wordWindows(p.text, 5)) quranWindows.add(w);
     const vectors = new VectorStore();
     const missing = passages.filter((p) => !vectors.has(p.id)).length;
     if (missing) throw new Error(`${missing} passages have no embedding; run the ingest script`);
     return {
       byId: new Map(passages.map((p) => [p.id, p])),
+      quranWindows,
+      hasDorar: loadManifest().some((m) => m.live && m.kind === "hadith"),
       sources: [...sources]
+        .filter((s) => !s.live && !s.excluded)
         .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind])
         .map((s) => {
           const own = passages.filter((p) => p.sourceId === s.id);
-          return { id: s.id, label: s.label, kind: s.kind, ids: own.map((p) => p.id), bm25: new BM25(own.map((p) => p.text)) };
+          // Book passages are long: let the question title weigh in keyword search (index only, display unchanged).
+          const searchText = (p: Passage) => (p.kind === "text" ? `${p.refLabel} ${p.refLabel} ${p.text.slice(0, 5000)}` : p.text);
+          return { id: s.id, label: s.label, kind: s.kind, ids: own.map((p) => p.id), bm25: new BM25(own.map(searchText)) };
         }),
       vectors,
     };
@@ -140,6 +153,7 @@ async function rewrite(question: string, sources: StageSource[]): Promise<string
 const RRF_K = 60;
 const LIST_DEPTH = 20;
 const FINAL_COUNT = 10;
+const DORAR_COUNT = 3;
 const MIN_PER_SOURCE = 2;
 
 type Ranked = { scores: Map<string, number>; via: Map<string, Set<"keyword" | "meaning">> };
@@ -187,10 +201,18 @@ function select(index: Index, ranked: Ranked[]): RetrievedPassage[] {
     if (picked.length >= FINAL_COUNT) break;
     if (!picked.includes(id)) picked.push(id);
   }
-  return picked.sort(byScore).map((id) => ({
+  const out: RetrievedPassage[] = picked.sort(byScore).map((id) => ({
     ...index.byId.get(id)!,
     via: [...(via.get(id) ?? [])].sort() as ("keyword" | "meaning")[],
   }));
+  // A tafsir passage brings the verse it explains (Quran text always from the Quran source).
+  for (const p of [...out]) {
+    for (const v of p.kind === "tafsir" ? (p.verses ?? []) : []) {
+      const q = index.byId.get(`quran:${v}`);
+      if (q && !out.some((x) => x.id === q.id)) out.push({ ...q, via: p.via });
+    }
+  }
+  return out;
 }
 
 // ---------- Step 3: grounded draft ----------
@@ -234,6 +256,8 @@ To answer, set status "answer":
 - Write 1 to 5 claims. Each claim is ONE short sentence in calm, clear Modern Standard Arabic that the daʿi can relay.
 - passage_ids: only ids from PASSAGES that directly support the claim. Prefer one passage per claim; list the passage containing the quote first.
 - supporting_quote: copy character for character a contiguous span of 3 to 20 words from the first cited passage that supports the claim. Keep its spelling and diacritics exactly; do not join separate places; do not add words.
+- Quran wording comes only from passages of type آية; hadith only from passages of type حديث. In تفسير and نص passages, quote the author's own explanatory words, never a verse or hadith quoted inside them.
+- In نص passages, text before the line "[[ما سبق عرض للسؤال أو الشبهة، وليس قول المؤلف]]" states a question or an opponent's claim: never present it as the author's position and never quote it as support.
 - Never write Quran text inside a claim: do not quote, paraphrase or restate the wording of a verse. Refer to it instead, for example "تبيّن الآية أن ..." or "تنهى الآية عن ...". The app shows the stored verse text itself.
 - Attribute words to the Prophet ﷺ, a companion, a scholar or an author only when the passage itself attributes them.
 - No fatwa, no ruling for a personal case, no claim of consensus (never say أجمع العلماء), no statements about what scholars hold, no judgment on anyone's fate.
@@ -250,9 +274,12 @@ When abstaining: abstain_reason is one or two calm Arabic sentences explaining w
 function formatPassages(passages: RetrievedPassage[]): string {
   return passages
     .map((p) => {
-      const type = p.kind === "quran" ? "آية" : p.kind === "hadith" ? "حديث" : "نص";
+      const type = p.kind === "quran" ? "آية" : p.kind === "tafsir" ? "تفسير" : p.kind === "hadith" ? "حديث" : "نص";
       const label = `${type} — ${p.refLabel}${p.grade ? ` — ${p.grade}` : ""}`;
-      const text = p.text.length > 4000 ? `${p.text.slice(0, 4000)} …` : p.text;
+      let body = p.text;
+      if (p.authorStart !== undefined && p.authorStart > 0)
+        body = `${body.slice(0, p.authorStart)}\n[[ما سبق عرض للسؤال أو الشبهة، وليس قول المؤلف]]\n${body.slice(p.authorStart)}`;
+      const text = body.length > 6000 ? `${body.slice(0, 6000)} …` : body;
       return `[${p.id}] (${label})\n${text}`;
     })
     .join("\n\n");
@@ -287,7 +314,7 @@ function wordWindows(text: string, size: number): Set<string> {
   return out;
 }
 
-function codeCheck(d: Draft, passages: RetrievedPassage[]): CheckedClaim[] {
+function codeCheck(d: Draft, passages: RetrievedPassage[], quranWindows: Set<string>): CheckedClaim[] {
   const byId = new Map(passages.map((p) => [p.id, p]));
   return d.claims.map((claim) => {
     const issues: string[] = [];
@@ -303,6 +330,11 @@ function codeCheck(d: Draft, passages: RetrievedPassage[]): CheckedClaim[] {
       if (span && !match) match = { passage_id: id, ...span };
     }
     if (!match) issues.push("supporting_quote does not appear in any cited passage; copy it exactly");
+    const mp = match ? byId.get(match.passage_id) : undefined;
+    if (match && mp?.authorStart !== undefined && match.start < mp.authorStart)
+      issues.push("supporting_quote is taken from the question or opponent's claim, not from the author's answer");
+    if (mp && mp.kind !== "quran" && [...wordWindows(claim.supporting_quote, 5)].some((w) => quranWindows.has(w)))
+      issues.push("supporting_quote is Quran wording taken from a non-Quran passage; cite the verse from an آية passage instead");
     // The model must not write verse wording itself.
     const claimWindows = wordWindows(claim.text, 4);
     for (const id of claim.passage_ids) {
@@ -370,7 +402,8 @@ export async function ask(question: string, emit: (e: PipelineEvent) => void): P
   const started = Date.now();
   const index = await getIndex();
 
-  const sourceInfo = index.sources.map(({ id, label, kind }) => ({ id, label, kind }));
+  const sourceInfo: StageSource[] = index.sources.map(({ id, label, kind }) => ({ id, label, kind }));
+  if (index.hasDorar) sourceInfo.push({ id: "dorar", label: "الدرر السنية", kind: "hadith" });
 
   emit({ type: "stage", stage: "rewriting", state: "active" });
   const rewritten = await rewrite(question, sourceInfo);
@@ -382,12 +415,47 @@ export async function ask(question: string, emit: (e: PipelineEvent) => void): P
   // Search every source (fast, in memory), choose the evidence set, then report per source
   // how many of its passages were kept, so "found 4 verses" is literally true.
   const ranked = index.sources.map((part) => searchCorpus(part, index.vectors, queries, queryVectors));
-  const passages = select(index, ranked);
-  for (const part of index.sources) {
-    const source = { id: part.id, label: part.label, kind: part.kind };
-    emit({ type: "stage", stage: "search", state: "active", source });
-    emit({ type: "stage", stage: "search", state: "done", source, count: passages.filter((p) => p.sourceId === part.id).length });
+  const local = select(index, ranked);
+  const groupOf = new Map(index.sources.map((p) => [p.id, sourceGroup(p)]));
+
+  // 1. Quran and tafsir: count the verses covered (directly or through their tafsir).
+  const quranStage: StageSource = { id: "quran", label: "القرآن والتفسير", kind: "quran" };
+  emit({ type: "stage", stage: "search", state: "active", source: quranStage });
+  const verses = new Set<string>();
+  for (const p of local) {
+    if (groupOf.get(p.sourceId) !== "quran") continue;
+    if (p.kind === "quran") verses.add(`${p.surah}:${p.ayah}`);
+    for (const v of p.verses ?? []) verses.add(v);
   }
+  emit({ type: "stage", stage: "search", state: "done", source: quranStage, count: verses.size });
+
+  // 2. Hadith, live from Dorar (a failure is reported and the answer continues without it).
+  const hadith: RetrievedPassage[] = [];
+  if (index.hasDorar) {
+    const hadithStage: StageSource = { id: "dorar", label: "الحديث (الدرر السنية)", kind: "hadith" };
+    emit({ type: "stage", stage: "search", state: "active", source: hadithStage });
+    const results = await Promise.allSettled(rewritten.slice(0, 2).map((q) => searchDorar(q)));
+    let reached = false;
+    for (const r of results) {
+      if (r.status !== "fulfilled") continue;
+      reached = true;
+      for (const h of r.value) {
+        if (hadith.length >= DORAR_COUNT) break;
+        if (!hadith.some((x) => x.text === h.text)) hadith.push({ ...h, via: ["keyword"] });
+      }
+    }
+    if (!reached) emit({ type: "stage", stage: "search", state: "done", source: hadithStage, count: 0, note: "تعذر الوصول لمصدر الحديث" });
+    else emit({ type: "stage", stage: "search", state: "done", source: hadithStage, count: hadith.length });
+  }
+
+  // 3. Books on doubts and creed.
+  if (index.sources.some((p) => sourceGroup(p) === "books")) {
+    const booksStage: StageSource = { id: "books", label: "كتب الشبهات والعقيدة", kind: "text" };
+    emit({ type: "stage", stage: "search", state: "active", source: booksStage });
+    emit({ type: "stage", stage: "search", state: "done", source: booksStage, count: local.filter((p) => groupOf.get(p.sourceId) === "books").length });
+  }
+
+  const passages = [...local, ...hadith];
   const attempts: AttemptLog[] = [];
   let feedback: string | null = null;
 
@@ -419,8 +487,8 @@ export async function ask(question: string, emit: (e: PipelineEvent) => void): P
     }
 
     emit({ type: "stage", stage: "verifying", state: "active" });
-    const checked = codeCheck(d, passages);
-    const verdicts = await verify(d.claims, index.byId);
+    const checked = codeCheck(d, passages, index.quranWindows);
+    const verdicts = await verify(d.claims, new Map(passages.map((p) => [p.id, p])));
     const log: AttemptLog = { attempt, status: "answer", claims: d.claims.length, issues: [], verdicts: [] };
     const problems: string[] = [];
     checked.forEach((c, i) => {

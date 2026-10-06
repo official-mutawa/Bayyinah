@@ -3,8 +3,10 @@
 // Usage: npm run ingest:check   (checks only, no API calls)
 //        npm run ingest         (checks, then embeddings; add -- --force to rebuild)
 
+import { createCipheriv, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { loadCorpus } from "../src/lib/corpus.ts";
+import { gzipSync } from "node:zlib";
+import { loadCorpus, PRIVATE_BUNDLE } from "../src/lib/corpus.ts";
 import { embed, embedModel, EMBED_DIMS, modelExists } from "../src/lib/openai.ts";
 import { embeddingText, quantize, saveVectors, VECTORS_META } from "../src/lib/vectors.ts";
 import type { VectorMeta } from "../src/lib/vectors.ts";
@@ -41,6 +43,20 @@ writeFileSync(
   "data/ingest-log.json",
   JSON.stringify({ checkedAt: new Date().toISOString(), total: corpus.passages.length, sources: corpus.report }, null, 2) + "\n"
 );
+
+// Private (copyrighted) sources: encrypted bundle for the deployed site; never committed in clear.
+const privateIds = corpus.sources.filter((x) => x.private && corpus.records[x.id]).map((x) => x.id);
+if (privateIds.length) {
+  const key = process.env.BAYYINAH_INDEX_KEY;
+  if (!key || key.length !== 64) fail("BAYYINAH_INDEX_KEY (64 hex chars) is required in .env.local to build the private bundle");
+  const payload = gzipSync(JSON.stringify(Object.fromEntries(privateIds.map((id) => [id, corpus.records[id]]))));
+  const iv = randomBytes(12);
+  const cipher = createCipheriv("aes-256-gcm", Buffer.from(key, "hex"), iv);
+  const enc = Buffer.concat([cipher.update(payload), cipher.final()]);
+  writeFileSync(PRIVATE_BUNDLE(), Buffer.concat([iv, cipher.getAuthTag(), enc]));
+  console.log(`
+Encrypted bundle for private sources (${privateIds.join(", ")}): data/private.enc`);
+}
 
 if (args.has("--checks-only")) process.exit(0);
 

@@ -2,12 +2,13 @@
 
 // Question box, the book with live stage labels from the NDJSON stream, then the result.
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PassageKind } from "@/lib/corpus";
 import type { AskResult, PipelineEvent } from "@/lib/pipeline";
 import { MAX_QUESTION_LENGTH } from "@/lib/limits";
 import { arabicDigits } from "@/lib/arabic";
 import { Book } from "./book";
+import { MushafClip } from "./mushaf-clip";
 import { FloatingBooks } from "./floating-books";
 import { HomeHero } from "./home-hero";
 import { SiteHeader } from "./site-header";
@@ -43,6 +44,7 @@ export function foundLabel(kind: PassageKind, n: number): string {
   const forms = {
     quran: ["لم يجد آيات مناسبة", "وجد آية واحدة", "وجد آيتين", "آيات", "آية"],
     hadith: ["لم يجد أحاديث مناسبة", "وجد حديثًا واحدًا", "وجد حديثين", "أحاديث", "حديثًا"],
+    tafsir: ["لم يجد تفسيرًا مناسبًا", "وجد موضعًا واحدًا من التفسير", "وجد موضعين من التفسير", "مواضع من التفسير", "موضعًا من التفسير"],
     text: ["لم يجد نصوصًا مناسبة", "وجد نصًّا واحدًا", "وجد نصّين", "نصوص", "نصًّا"],
   }[kind];
   if (n <= 2) return forms[n];
@@ -57,7 +59,7 @@ function stageRow(e: StageEvent): Omit<StageRow, "state"> {
       return {
         key: `search:${e.source?.id}`,
         label: `البحث في ${e.source?.label ?? "المصادر"}`,
-        detail: e.count !== undefined && e.source ? foundLabel(e.source.kind, e.count) : undefined,
+        detail: e.note ?? (e.count !== undefined && e.source ? foundLabel(e.source.kind, e.count) : undefined),
       };
     case "drafting":
       return { key: "drafting", label: "كتابة المسودة من النصوص المسترجعة" };
@@ -73,19 +75,19 @@ function stageRow(e: StageEvent): Omit<StageRow, "state"> {
 }
 
 function bookLabel(e: StageEvent, lastKind: PassageKind | null): BookLabel | null {
-  if (e.stage === "rewriting" && e.state === "active") return { text: "يصوغ عبارات البحث", kind: null, phase: "searching" };
+  if (e.stage === "rewriting" && e.state === "active") return { text: "صياغة عبارات البحث", kind: null, phase: "searching" };
   if (e.stage === "search" && e.source) {
-    if (e.state === "active") return { text: `يبحث في ${e.source.label}`, kind: e.source.kind, phase: "searching" };
-    if (e.count !== undefined) return { text: foundLabel(e.source.kind, e.count), kind: e.source.kind, phase: "searching" };
+    if (e.state === "active") return { text: `البحث في ${e.source.label}`, kind: e.source.kind, phase: "searching" };
+    if (e.count !== undefined) return { text: e.note ?? foundLabel(e.source.kind, e.count), kind: e.source.kind, phase: "searching" };
   }
   if (e.state !== "active") {
     if (e.stage === "verifying" && e.total)
       return { text: `اجتاز التحقق ${arabicDigits(e.passed ?? 0)} من ${arabicDigits(e.total)}`, kind: lastKind, phase: "writing" };
     return null;
   }
-  if (e.stage === "drafting") return { text: "يكتب المسودة", kind: lastKind, phase: "writing" };
-  if (e.stage === "verifying") return { text: "يتحقق من الإسناد", kind: lastKind, phase: "writing" };
-  if (e.stage === "redrafting") return { text: "يعيد الكتابة بعد ملاحظات التحقق", kind: lastKind, phase: "writing" };
+  if (e.stage === "drafting") return { text: "كتابة المسودة", kind: lastKind, phase: "writing" };
+  if (e.stage === "verifying") return { text: "التحقق من الإسناد", kind: lastKind, phase: "writing" };
+  if (e.stage === "redrafting") return { text: "إعادة الكتابة بعد ملاحظات التحقق", kind: lastKind, phase: "writing" };
   return null;
 }
 
@@ -214,10 +216,18 @@ export function AskApp() {
 
   const idle = phase === "idle";
 
+  // Lets CSS keep the paper grain to the home state only.
+  useEffect(() => {
+    document.documentElement.dataset.phase = phase;
+  }, [phase]);
+
+  // Quran stage (and the first moments of a search): the Mushaf clip. Hadith and books: the drawn book.
+  const showClip = !label?.kind || label.kind === "quran" || label.kind === "tafsir";
+
   return (
     <>
       <FloatingBooks visible={idle} />
-      <SiteHeader current="home" showBrand={!idle} />
+      <SiteHeader showBrand={!idle} />
       <main className="mx-auto w-full max-w-2xl px-4">
         {idle ? <HomeHero /> : <h1 className="sr-only">بيّنة</h1>}
         <div className={`flex flex-col gap-6 ${idle ? "relative z-10 -mt-12 sm:-mt-16" : "mt-2"}`}>
@@ -304,7 +314,7 @@ export function AskApp() {
           {/* The book and its stage label. The label is the polite live region. */}
           {running && (
             <div className="fade-in flex flex-col items-center">
-              <Book key={label?.kind ?? "quran"} kind={label?.kind ?? null} />
+              {showClip ? <MushafClip /> : <Book key={label?.kind ?? "quran"} kind={label?.kind ?? null} />}
               <p role="status" aria-live="polite" className="mt-1 min-h-7 text-center font-heading text-lg font-bold text-primary">
                 {label?.text ?? "يبدأ البحث"}
               </p>

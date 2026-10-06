@@ -67,7 +67,7 @@ export default function EvaluationPage() {
   const r = loadResults();
   return (
     <>
-      <SiteHeader current="evaluation" />
+      <SiteHeader />
       <main className="mx-auto w-full max-w-2xl px-4">
         <h1 className="mt-2 text-3xl font-bold text-primary">نتائج التقييم</h1>
         <p className="mt-2 text-muted text-pretty">

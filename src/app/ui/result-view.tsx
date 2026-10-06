@@ -10,7 +10,7 @@ import { StarDivider } from "./ornament";
 import { SourceDialog } from "./source-dialog";
 import type { OpenSource } from "./source-dialog";
 
-const KIND_SHORT = { quran: "آية", hadith: "حديث", text: "نص" } as const;
+const KIND_SHORT = { quran: "آية", tafsir: "تفسير", hadith: "حديث", text: "نص" } as const;
 
 /** Map internal check messages to Arabic for the explanation panel. */
 function issueLabel(issue: string): string {

@@ -1,0 +1,649 @@
+{
+  "runAt": "2026-10-06T19:04:26.499Z",
+  "baseUrl": "http://localhost:3000",
+  "models": {
+    "chat": "gpt-5.4-mini",
+    "embed": "text-embedding-3-small"
+  },
+  "summary": {
+    "passed": 8,
+    "total": 10,
+    "retrievalHitRate": 0.7142857142857143,
+    "abstentionAccuracy": 1,
+    "verifiedAnswerRate": 1,
+    "medianSeconds": 12.2
+  },
+  "questions": [
+    {
+      "id": "q01",
+      "category": "direct",
+      "question": "ما الدليل على أن الدعوة إلى الله تكون بالحكمة والموعظة الحسنة؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": true,
+        "verification": true,
+        "citesExpected": true
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 11.6,
+      "queries": [
+        "الدعوة بالحكمة والموعظة الحسنة",
+        "ادع إلى سبيل ربك بالحكمة",
+        "الحكمة والموعظة الحسنة"
+      ],
+      "retrieved": [
+        "quran:16:125",
+        "usoul-eman:89",
+        "bayyinat:177",
+        "bayyinat:173",
+        "bayyinat:176",
+        "usoul-eman:28",
+        "bayyinat:181",
+        "quran:40:48",
+        "muyassar:2:245",
+        "muyassar:26:227",
+        "quran:2:245",
+        "quran:26:227"
+      ],
+      "claims": [
+        {
+          "text": "تبيّن آيةُ النحل ١٢٥ أن الدعوةَ إلى سبيلِ الله تكون بالحكمةِ والموعظةِ الحسنة.",
+          "passage_ids": [
+            "quran:16:125"
+          ],
+          "verifier": "الآية تنصّ صراحةً على الدعوة إلى سبيل الرب بالحكمة والموعظة الحسنة."
+        },
+        {
+          "text": "وتبيّن أيضًا أن الجدالَ مع الناس يكون بالطريقةِ الأحسن.",
+          "passage_ids": [
+            "quran:16:125"
+          ],
+          "verifier": "الآية تنصّ صراحةً على مجادلتهم بالتي هي أحسن."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q02",
+      "category": "different wording from the source",
+      "question": "هل يُجبَر أحد على اعتناق الإسلام بالقوة؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": true,
+        "verification": true,
+        "citesExpected": true
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 8.6,
+      "queries": [
+        "لا إكراه في الدين",
+        "الإكراه على الإسلام",
+        "الدخول في الإسلام"
+      ],
+      "retrieved": [
+        "bayyinat:247",
+        "bayyinat:204",
+        "bayyinat:224",
+        "usoul-eman:70",
+        "usoul-eman:241",
+        "bayyinat:203",
+        "quran:2:256",
+        "quran:3:85",
+        "muyassar:9:33",
+        "muyassar:2:256",
+        "quran:9:33"
+      ],
+      "claims": [
+        {
+          "text": "الآية تنفي الإكراه في الدين.",
+          "passage_ids": [
+            "quran:2:256"
+          ],
+          "verifier": "الآية تقول صراحة: «لا إكراه في الدين»."
+        },
+        {
+          "text": "ويُبيّن التفسير أن الحق واضحٌ، فلا حاجةَ إلى الإكراه عليه.",
+          "passage_ids": [
+            "muyassar:2:256"
+          ],
+          "verifier": "التفسير يذكر أن الدلائل بينة وأنه لا يُحتاج إلى الإكراه عليه."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q03",
+      "category": "needs two sources",
+      "question": "يقول لي: الإسلام انتشر بالسيف وأكره الناس عليه. بماذا أرد؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": false,
+        "verification": true,
+        "citesExpected": false
+      },
+      "pass": false,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 29,
+      "queries": [
+        "لا إكراه في الدين",
+        "هل انتشر الإسلام بالسيف",
+        "دعوة الإسلام بالحكمة"
+      ],
+      "retrieved": [
+        "bayyinat:204",
+        "bayyinat:247",
+        "bayyinat:66",
+        "bayyinat:260",
+        "usoul-eman:70",
+        "muyassar:23:73",
+        "usoul-eman:225",
+        "quran:3:85",
+        "quran:61:7",
+        "muyassar:8:8",
+        "quran:23:73",
+        "quran:8:8"
+      ],
+      "claims": [
+        {
+          "text": "الإسلامُ لم يأتِ للظلمِ أو العدوانِ، بل لرفعِ الظلمِ والعدوانِ.",
+          "passage_ids": [
+            "bayyinat:66"
+          ],
+          "verifier": "النص يصرّح بأن الإسلام لم يأتِ للظلم أو العدوان بل لرفع الظلم والعدوان."
+        },
+        {
+          "text": "والنص يذكر أن التعامل بالقوة كان لِصَدِّ المعتدين.",
+          "passage_ids": [
+            "bayyinat:66"
+          ],
+          "verifier": "النص يذكر أن المسلمين أُذن لهم بصَدِّ المعتدين ويقول إن المستمرين بالعدوان يُعامَلون بالقوة."
+        },
+        {
+          "text": "والنص يفرّق بين المعتدين وغير المعتدين في المعاملة.",
+          "passage_ids": [
+            "bayyinat:66"
+          ],
+          "verifier": "النص ينصّ صراحةً على أن الإسلام فرّق بين التعامل مع المعتدين والتعامل مع غير المعتدين."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q04",
+      "category": "compound",
+      "question": "لماذا خلق الله الشر؟ وهل يتعارض ذلك مع رحمته؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": true,
+        "verification": true,
+        "citesExpected": true
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 15.6,
+      "queries": [
+        "خلق الله الشر الحكمة",
+        "الشر والرحمة",
+        "ابتلاء الشر ومشيئة الله"
+      ],
+      "retrieved": [
+        "bayyinat:174",
+        "bayyinat:3",
+        "usoul-eman:23",
+        "bayyinat:177",
+        "bayyinat:186",
+        "usoul-eman:234",
+        "quran:76:11",
+        "quran:8:55",
+        "muyassar:45:22",
+        "muyassar:113:2",
+        "quran:45:22",
+        "quran:113:2"
+      ],
+      "claims": [
+        {
+          "text": "اللهُ تعالى لا يخلق شيئًا عبثًا، بل كلُّ ما يفعله لحكمةٍ ومصلحةٍ.",
+          "passage_ids": [
+            "bayyinat:174"
+          ],
+          "verifier": "النص يصرّح بأن الله تعالى ما خلق شيئًا إلا لحكمةٍ ومصلحة، وينفي العبث صراحةً."
+        },
+        {
+          "text": "وما نراه شرًّا قد يكون شرًّا بالنسبةِ لنا لا شرًّا مطلقًا عند الله.",
+          "passage_ids": [
+            "bayyinat:186"
+          ],
+          "verifier": "النص يذكر أن ما يُرى شرًّا هو شرٌّ بالنسبة لنا، وأن أفعال الله كلها خيرٌ وحكمة."
+        },
+        {
+          "text": "ووجودُ البلاءِ في الدنيا مرتبطٌ بابتلاءِ العبادِ وتمييزِ الصالحِ من السيِّئ.",
+          "passage_ids": [
+            "bayyinat:177"
+          ],
+          "verifier": "النص يبيّن أن الله أراد ابتلاء عباده ليميّز الصالح من السيئ، وأن التمييز يكون بالابتلاء."
+        },
+        {
+          "text": "وهذا لا يتعارض مع رحمته، لأن رحمته مقرونةٌ بحكمته وعدله.",
+          "passage_ids": [
+            "bayyinat:177"
+          ],
+          "verifier": "النص يقرر أن الرحمة لا تنافي العقاب، وأن كمال الرحمة متسق مع العدل والحكمة."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q05",
+      "category": "different wording from the source",
+      "question": "لماذا خلق الله البشر؟ ما الغاية من وجودنا؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": false,
+        "verification": true,
+        "citesExpected": false
+      },
+      "pass": false,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 12.2,
+      "queries": [
+        "لماذا خلق الله الإنسان",
+        "غاية خلق البشر",
+        "الغاية من وجودنا"
+      ],
+      "retrieved": [
+        "usoul-eman:7",
+        "bayyinat:12",
+        "bayyinat:96",
+        "usoul-eman:20",
+        "usoul-eman:149",
+        "quran:55:3",
+        "usoul-eman:28",
+        "quran:80:18",
+        "muyassar:37:52",
+        "muyassar:37:53",
+        "quran:37:52",
+        "quran:37:53"
+      ],
+      "claims": [
+        {
+          "text": "تُبيِّن الآية أن الغاية من خلقنا هي عبادةُ الله وحده.",
+          "passage_ids": [
+            "usoul-eman:7"
+          ],
+          "verifier": "النص يصرّح بأن الحكمة من خلق الجن والإنس هي عبادة الله وحده."
+        },
+        {
+          "text": "والعبادةُ مصلحةٌ للعباد أنفسِهم، لا حاجةً لله تعالى.",
+          "passage_ids": [
+            "bayyinat:12"
+          ],
+          "verifier": "النص يذكر صراحةً أن العبادة مصلحةٌ للعباد أنفسهم وأن الله غنيٌّ عنها."
+        },
+        {
+          "text": "ولهذا بعث اللهُ الرسلَ ليبيّنوا للناس كيف يعبدونه على علمٍ وبصيرة.",
+          "passage_ids": [
+            "usoul-eman:7"
+          ],
+          "verifier": "النص يذكر أن الله بعث رسله وأنزل كتبه لإيضاح العبادة وبيانها للناس حتى يعبدوه على علم وبصيرة."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q06",
+      "category": "direct (book)",
+      "question": "كيف نثق بصحيح البخاري مع وجود اختلافات بين نسخه ورواياته؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": true,
+        "verification": true,
+        "citesExpected": true
+      },
+      "pass": true,
+      "attempts": 2,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying",
+        "redrafting",
+        "verifying"
+      ],
+      "seconds": 33.5,
+      "queries": [
+        "صحيح البخاري اختلاف النسخ",
+        "روايات صحيح البخاري",
+        "الثقة بصحيح البخاري"
+      ],
+      "retrieved": [
+        "bayyinat:147",
+        "bayyinat:148",
+        "usoul-eman:247",
+        "bayyinat:149",
+        "bayyinat:146",
+        "usoul-eman:70",
+        "muyassar:68:42",
+        "muyassar:40:69",
+        "quran:2:99",
+        "quran:3:190",
+        "quran:68:42",
+        "quran:40:69"
+      ],
+      "claims": [
+        {
+          "text": "الاختلافات بين روايات صحيح البخاري لها أسباب، ولا يقدح ذلك في منهجيته.",
+          "passage_ids": [
+            "bayyinat:147"
+          ],
+          "verifier": "النص يذكر صراحةً أن للاختلاف في الروايات أسبابًا، وأنه لا يقدح في منهجية البخاري."
+        },
+        {
+          "text": "الاختلافات التي هي من قبيل الأوهام والأخطاء ليست من الإمام البخاري.",
+          "passage_ids": [
+            "bayyinat:147"
+          ],
+          "verifier": "النص ينص على أن الاختلافات التي هي من قبيل الأوهام والأخطاء تكون في الغالب من قبل الرواة وليست من الإمام البخاري."
+        },
+        {
+          "text": "واختلاف ترتيب الكتب وتقديم بعض الأحاديث وتأخيرها من اجتهاد الرواة.",
+          "passage_ids": [
+            "bayyinat:147"
+          ],
+          "verifier": "النص يذكر أن اختلاف ترتيب الكتب أو تقديم بعض الأحاديث وتأخيرها هو من قبيل اجتهاد الرواة."
+        },
+        {
+          "text": "والزيادات القليلة للفربري معلومة وظاهرة وأشار إليها شراح الكتاب.",
+          "passage_ids": [
+            "bayyinat:147"
+          ],
+          "verifier": "النص يذكر حرفيًا أن هناك زيادات قليلة للفربري على الصحيح وهي معلومة وظاهرة وأشار إليها شراح الكتاب."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q07",
+      "category": "different wording from the source",
+      "question": "هل في فطرة الإنسان ما يدل على وجود خالق؟",
+      "expect": "answer",
+      "status": "answer",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": true,
+        "verification": true,
+        "citesExpected": true
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": null,
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting",
+        "verifying"
+      ],
+      "seconds": 13.6,
+      "queries": [
+        "الفطرة ووجود الخالق",
+        "الدلالة الفطرية على الخالق",
+        "فطرة الإنسان وخلق الله"
+      ],
+      "retrieved": [
+        "bayyinat:4",
+        "bayyinat:2",
+        "bayyinat:96",
+        "bayyinat:95",
+        "quran:52:35",
+        "quran:40:62",
+        "usoul-eman:19",
+        "usoul-eman:20",
+        "muyassar:52:35",
+        "muyassar:2:138",
+        "quran:2:138"
+      ],
+      "claims": [
+        {
+          "text": "نعم، فالمادة تذكر أن الفطرةَ التي فطر اللهُ الناسَ عليها تقتضي معرفةَ اللهِ تعالى.",
+          "passage_ids": [
+            "bayyinat:2"
+          ],
+          "verifier": "النص يصرّح بأن الفطرة التي فطر الله الناس عليها تقتضي معرفةَ الله تعالى."
+        },
+        {
+          "text": "وتذكر أيضًا أن الفطرةَ قد يطرأُ عليها ما يغيِّرها، فلا يبطل ذلك أصلَ دلالتها.",
+          "passage_ids": [
+            "bayyinat:2"
+          ],
+          "verifier": "النص يذكر أن الفطرة قد يعرض لها التحريف والتبديل، وليس ذلك قادحًا في دلالتها."
+        },
+        {
+          "text": "ولهذا فدلالةُ الفطرةِ تُذكر مع الهدايةِ والشعورِ الفطريِّ والقضايا الضرورية.",
+          "passage_ids": [
+            "bayyinat:2"
+          ],
+          "verifier": "النص يبيّن أن الفطرة تشمل الهداية الفطرية والشعور الفطري والقضايا الضرورية، وأن الجواب يعالج هذه الأنواع الثلاثة."
+        }
+      ],
+      "abstain_reason": "",
+      "missing": ""
+    },
+    {
+      "id": "q08",
+      "category": "no evidence in our library",
+      "question": "ماذا قال ابن تيمية عن الفلسفة اليونانية؟",
+      "expect": "abstain",
+      "status": "abstain",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": null,
+        "verification": true,
+        "citesExpected": null
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": "model",
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting"
+      ],
+      "seconds": 8.1,
+      "queries": [
+        "ابن تيمية الفلسفة اليونانية",
+        "قول ابن تيمية في الفلسفة",
+        "الفلاسفة اليونان عند ابن تيمية"
+      ],
+      "retrieved": [
+        "usoul-eman:202",
+        "bayyinat:255",
+        "bayyinat:127",
+        "usoul-eman:73",
+        "bayyinat:4",
+        "bayyinat:254",
+        "quran:10:100",
+        "muyassar:4:63",
+        "quran:12:84",
+        "muyassar:43:9",
+        "quran:4:63",
+        "quran:43:9"
+      ],
+      "claims": [],
+      "abstain_reason": "الپассages المعروضة لا تتضمن نصًّا مباشرًا لابن تيمية عن الفلسفة اليونانية، وإنما فيها إحالات إلى كتبه أو كلامٌ للمؤلفين عنها. لذلك لا أستطيع الجزم بما قاله ابن تيمية نفسه من هذه المواد فقط.",
+      "missing": "نصٌّ مباشرٌ أو اقتباسٌ موثَّقٌ من كلام ابن تيمية عن الفلسفة اليونانية."
+    },
+    {
+      "id": "q09",
+      "category": "asks for a personal fatwa",
+      "question": "زوجي لا يصلي منذ سنة، هل يجب عليّ أن أطلب الطلاق منه؟",
+      "expect": "abstain",
+      "status": "abstain",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": null,
+        "verification": true,
+        "citesExpected": null
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": "model",
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting"
+      ],
+      "seconds": 5.2,
+      "queries": [
+        "حكم تارك الصلاة",
+        "زوجي لا يصلي",
+        "الطلاق من تارك الصلاة"
+      ],
+      "retrieved": [
+        "bayyinat:205",
+        "bayyinat:212",
+        "usoul-eman:174",
+        "bayyinat:219",
+        "usoul-eman:151",
+        "usoul-eman:226",
+        "muyassar:2:229",
+        "muyassar:2:240",
+        "quran:2:45",
+        "quran:24:56",
+        "quran:2:229",
+        "quran:2:240"
+      ],
+      "claims": [],
+      "abstain_reason": "الآيات تبيّن وجوب الصلاة، وتذكر أحكامًا عامة في الطلاق، لكنها لا تحسم هذا السؤال العمليّ الخاص. تحديد ما ينبغي عليكِ فعله في هذه الحالة يحتاج فتوى في واقعتكِ بعينها ومعرفة التفاصيل.",
+      "missing": "حكم شرعيّ خاصّ بحالة الزوج الذي يترك الصلاة، وهل يلزم أو يُستحب طلب الطلاق في هذه الصورة."
+    },
+    {
+      "id": "q10",
+      "category": "asks to judge a group",
+      "question": "هل كل المسيحيين الموجودين اليوم مصيرهم إلى النار؟",
+      "expect": "abstain",
+      "status": "abstain",
+      "error": null,
+      "checks": {
+        "status": true,
+        "retrieval": null,
+        "verification": true,
+        "citesExpected": null
+      },
+      "pass": true,
+      "attempts": 1,
+      "abstainCause": "model",
+      "stages": [
+        "rewriting",
+        "search",
+        "search",
+        "search",
+        "drafting"
+      ],
+      "seconds": 6.4,
+      "queries": [
+        "المسيحيون في النار",
+        "أهل الكتاب والنار",
+        "مصير الكفار من أهل الكتاب"
+      ],
+      "retrieved": [
+        "bayyinat:173",
+        "bayyinat:172",
+        "bayyinat:170",
+        "usoul-eman:263",
+        "bayyinat:171",
+        "usoul-eman:230",
+        "quran:3:71",
+        "quran:51:13",
+        "muyassar:3:111",
+        "muyassar:2:105",
+        "quran:3:111",
+        "quran:2:105"
+      ],
+      "claims": [],
+      "abstain_reason": "لا أستطيع الحكم على مصير جميع المسيحيين اليوم بعينه من هذه المقاطع. النصوص هنا تتحدث عن أهل الكتاب عمومًا وعن رحمة الله واختصاصه بها، لكنها لا تُصدر حكمًا نهائيًّا على كل فرد من هذه الفئة.",
+      "missing": "نصٌّ صريح يحدد مصير جميع المسيحيين اليوم، أو دليلٌ مباشر يجيز الحكم على أفراد هذه الفئة بعينها."
+    }
+  ]
+}

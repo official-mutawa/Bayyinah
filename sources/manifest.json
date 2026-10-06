@@ -1,0 +1,118 @@
+{
+  "sources": [
+    {
+      "id": "quran",
+      "kind": "quran",
+      "group": "quran",
+      "label": "القرآن الكريم",
+      "format": "quranpedia-mushaf",
+      "file": "mushafs-1.json.gz",
+      "sha256": "18ecddb19fbab73f38b9f869cf4ca1f33796edcfdf055fa53985992c12c02c4d",
+      "expectedCount": 6236,
+      "attribution": "مصحف حفص عن عاصم (موافق لطبعة مجمع الملك فهد لطباعة المصحف الشريف) من «الموسوعة القرآنية quranpedia.net»، الإصدار 2026-10-06",
+      "license": "رخصة الموسوعة القرآنية: الاستعمال داخل التطبيقات مسموح، ونشر البيانات يلزم فيه ذكر «الموسوعة القرآنية quranpedia.net» مع الرابط ورقم الإصدار",
+      "url": "https://quranpedia.net/dumps",
+      "version": "2026-10-06 (mushafs-1.json.gz)"
+    },
+    {
+      "id": "muyassar",
+      "kind": "tafsir",
+      "group": "quran",
+      "label": "التفسير الميسر",
+      "format": "quranpedia-tafsir",
+      "file": "tafsir-book-2012.json.gz",
+      "sha256": "54357a3c6c3650d1bdecdf99587c91c41f19370dc61be73255e38da632a494df",
+      "expectedCount": 6236,
+      "attribution": "التفسير الميسر، مجمع الملك فهد لطباعة المصحف الشريف، من «الموسوعة القرآنية quranpedia.net»، الإصدار 2026-08-10",
+      "license": "رخصة الموسوعة القرآنية: الاستعمال داخل التطبيقات مسموح، ونشر البيانات يلزم فيه ذكر «الموسوعة القرآنية quranpedia.net» مع الرابط ورقم الإصدار",
+      "url": "https://quranpedia.net/dumps",
+      "version": "2026-08-10 (tafsir-book-2012.json.gz)"
+    },
+    {
+      "id": "dorar",
+      "kind": "hadith",
+      "group": "hadith",
+      "label": "الدرر السنية — الموسوعة الحديثية",
+      "format": "json",
+      "file": "",
+      "live": true,
+      "attribution": "الأحاديث وأحكام المحدثين كما تعيدها الموسوعة الحديثية في موقع الدرر السنية عبر واجهتها البرمجية الرسمية",
+      "license": "الواجهة البرمجية العامة للدرر السنية",
+      "url": "https://dorar.net/article/389"
+    },
+    {
+      "id": "bayyinat",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "بينات: أسئلة وأجوبة عن الإسلام",
+      "format": "book-chunks",
+      "file": "bayyinat.chunks.json",
+      "sha256": "1be3f538c1db98a89b22dbe6ff61275089784d317a8adba7b6542deade8fcc81",
+      "attribution": "مركز أصول — من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق؛ يُستعمل داخل التطبيق ولا يُنشر نصه",
+      "version": "PDF من الحقيبة العلمية، استخراج من طبقة النص"
+    },
+    {
+      "id": "usoul-eman",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "أصول الإيمان في ضوء الكتاب والسنة",
+      "format": "book-chunks",
+      "file": "usoul-eman.chunks.json",
+      "sha256": "5ce8ad10803ec311480553ba37bba0cd8cfaff35cecc9d52ed9e5f33db12d1e6",
+      "attribution": "من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق؛ يُستعمل داخل التطبيق ولا يُنشر نصه",
+      "version": "PDF من الحقيبة العلمية، استخراج من طبقة النص"
+    },
+    {
+      "id": "lateef-mannan",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "تفسير اللطيف المنان (السعدي)",
+      "format": "book-chunks",
+      "file": "",
+      "excluded": "طبقة النص في ملف PDF معطوبة الترميز (خط مخصص)، فيحتاج استخراجًا ضوئيًا (OCR) لم يُنفَّذ بعد",
+      "attribution": "من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق"
+    },
+    {
+      "id": "shumoo-nahar",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "شموع النهار",
+      "format": "book-chunks",
+      "file": "",
+      "excluded": "طبقة النص في ملف PDF معطوبة الترميز (خط مخصص)، فيحتاج استخراجًا ضوئيًا (OCR) لم يُنفَّذ بعد",
+      "attribution": "من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق"
+    },
+    {
+      "id": "raheeq",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "الرحيق المختوم",
+      "format": "book-chunks",
+      "file": "",
+      "excluded": "ملف PDF في الحقيبة العلمية صفحاته صور ممسوحة، فيحتاج استخراجًا ضوئيًا (OCR) لم يُنفَّذ بعد",
+      "attribution": "من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق"
+    },
+    {
+      "id": "barahin",
+      "kind": "text",
+      "group": "books",
+      "private": true,
+      "label": "براهين وجود الله",
+      "format": "book-chunks",
+      "file": "",
+      "excluded": "ملف PDF في الحقيبة العلمية صفحاته صور ممسوحة، فيحتاج استخراجًا ضوئيًا (OCR) لم يُنفَّذ بعد",
+      "attribution": "من الحقيبة العلمية الرسمية للتحدي",
+      "license": "محفوظ الحقوق"
+    }
+  ]
+}

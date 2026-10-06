@@ -2,7 +2,7 @@ import { loadManifest } from "@/lib/corpus";
 
 /** Footer: attribution for every approved source, from sources/manifest.json, plus the disclaimer. */
 export function SiteFooter() {
-  const sources = loadManifest();
+  const sources = loadManifest().filter((s) => !s.excluded);
   return (
     <footer className="mt-auto pt-12">
       <div className="mx-auto w-full max-w-2xl px-4 pb-8 text-sm leading-relaxed text-ink-2">

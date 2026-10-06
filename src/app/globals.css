@@ -392,3 +392,21 @@ body::after {
     transform: none;
   }
 }
+
+/* Mushaf clip: sits directly on the page background; no border, radius, shadow or card. */
+.mushaf-clip {
+  display: block;
+  width: 100%;
+  max-width: 36rem;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  margin-inline: auto;
+  background: #fbf7ef;
+}
+
+/* Outside the empty home state the page is plain paper (no grain), so the clip's edge never shows. */
+:root[data-phase="running"] body::after,
+:root[data-phase="done"] body::after,
+:root[data-phase="error"] body::after {
+  display: none;
+}

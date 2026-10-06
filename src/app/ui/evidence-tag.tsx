@@ -1,6 +1,6 @@
 import type { PassageKind } from "@/lib/corpus";
 
-const LABEL: Record<PassageKind, string> = { quran: "آية", hadith: "حديث", text: "نص" };
+const LABEL: Record<PassageKind, string> = { quran: "آية", tafsir: "تفسير", hadith: "حديث", text: "نص" };
 
 /** Evidence status: آية / حديث (with its grade exactly as given in the data) / نص. */
 export function EvidenceTag({ kind, grade }: { kind: PassageKind; grade: string | null }) {

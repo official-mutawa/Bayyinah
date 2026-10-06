@@ -14,6 +14,11 @@ export interface RawRecord {
   ayah?: number;
   number?: string;
   grade?: string | null;
+  page?: number;
+  /** Quran verse ids this passage explains or cites explicitly, e.g. ["16:125"] */
+  verses?: string[];
+  /** Offset where the author's own words start (text before it states a question or claim) */
+  authorStart?: number;
 }
 
 /** Field mapping for record formats (json, jsonl, csv, tsv). Values are field/column names. */
@@ -83,6 +88,39 @@ function quranXml(content: string): RawRecord[] {
     }
   }
   return out;
+}
+
+/** quranpedia.net mushaf dump (/v1/mushafs/{id}): data.surahs[].ayahs[] with text exactly as published. */
+function quranpediaMushaf(content: string): RawRecord[] {
+  const d = JSON.parse(content) as { data: { surahs: { id: number; name: string; ayahs: { number: number; text: string; page_number: number }[] }[] } };
+  const out: RawRecord[] = [];
+  for (const s of d.data.surahs) {
+    const surahName = s.name.replace(/^سورة\s+/, "");
+    for (const a of s.ayahs) {
+      out.push({ key: `${s.id}:${a.number}`, text: a.text, refLabel: `${surahName} ${arabicDigits(a.number)}`, surah: s.id, surahName, ayah: a.number, page: a.page_number });
+    }
+  }
+  return out;
+}
+
+/** quranpedia.net tafsir dump (/v1/ayah/{surah}/{ayah}/book/{id}): one entry per verse. */
+function quranpediaTafsir(content: string, ctx: AdapterContext): RawRecord[] {
+  const d = JSON.parse(content) as { ayahs: { surah: number; ayah: number; content: { text: string; page?: number | null }[] }[] };
+  return d.ayahs.map((a) => ({
+    key: `${a.surah}:${a.ayah}`,
+    text: a.content.map((c) => c.text).join("\n"),
+    refLabel: `${ctx.sourceLabel}، ${arabicDigits(a.surah)}:${arabicDigits(a.ayah)}`,
+    surah: a.surah,
+    ayah: a.ayah,
+    page: a.content[0]?.page ?? undefined,
+    verses: [`${a.surah}:${a.ayah}`],
+  }));
+}
+
+/** Book chunks produced by scripts/extract-books.ts (text taken from the PDF text layer). */
+function bookChunks(content: string): RawRecord[] {
+  const d = JSON.parse(content) as { chunks: RawRecord[] };
+  return d.chunks;
 }
 
 /** Quran text with aya numbers: "sura|aya|text" per line; other lines (e.g. a "#" license block) are skipped. */
@@ -181,6 +219,9 @@ function plainText(content: string, ctx: AdapterContext): RawRecord[] {
 export const ADAPTERS = {
   "quran-xml": (c: string) => quranXml(c),
   "quran-txt": (c: string) => quranTxt(c),
+  "quranpedia-mushaf": (c: string) => quranpediaMushaf(c),
+  "quranpedia-tafsir": quranpediaTafsir,
+  "book-chunks": (c: string) => bookChunks(c),
   json,
   jsonl,
   csv: (c: string, ctx: AdapterContext) => delimited(c, ctx, ","),

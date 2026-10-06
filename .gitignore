@@ -187,4 +187,13 @@ next-env.d.ts
 /sources/*
 !/sources/README.md
 !/sources/manifest.example.json
-/data/
+!/sources/manifest.json
+# quranpedia data may be committed with attribution; book texts and their chunks never.
+!/sources/mushafs-1.json.gz
+!/sources/tafsir-book-2012.json.gz
+/data/*
+# Runtime index: vectors, the encrypted bundle of private books, and the ingest log.
+!/data/embeddings.i8.bin
+!/data/embeddings.json
+!/data/private.enc
+!/data/ingest-log.json

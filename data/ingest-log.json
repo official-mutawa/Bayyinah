@@ -1,0 +1,38 @@
+{
+  "checkedAt": "2026-10-06T19:00:02.319Z",
+  "total": 12963,
+  "sources": [
+    {
+      "id": "quran",
+      "label": "القرآن الكريم",
+      "kind": "quran",
+      "count": 6236,
+      "sha256": "18ecddb19fbab73f38b9f869cf4ca1f33796edcfdf055fa53985992c12c02c4d",
+      "version": "2026-10-06 (mushafs-1.json.gz)"
+    },
+    {
+      "id": "muyassar",
+      "label": "التفسير الميسر",
+      "kind": "tafsir",
+      "count": 6236,
+      "sha256": "54357a3c6c3650d1bdecdf99587c91c41f19370dc61be73255e38da632a494df",
+      "version": "2026-08-10 (tafsir-book-2012.json.gz)"
+    },
+    {
+      "id": "bayyinat",
+      "label": "بينات: أسئلة وأجوبة عن الإسلام",
+      "kind": "text",
+      "count": 236,
+      "sha256": "1be3f538c1db98a89b22dbe6ff61275089784d317a8adba7b6542deade8fcc81",
+      "version": "PDF من الحقيبة العلمية، استخراج من طبقة النص"
+    },
+    {
+      "id": "usoul-eman",
+      "label": "أصول الإيمان في ضوء الكتاب والسنة",
+      "kind": "text",
+      "count": 255,
+      "sha256": "5ce8ad10803ec311480553ba37bba0cd8cfaff35cecc9d52ed9e5f33db12d1e6",
+      "version": "PDF من الحقيبة العلمية، استخراج من طبقة النص"
+    }
+  ]
+}
