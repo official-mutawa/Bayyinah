@@ -1,8 +1,11 @@
 // Builds the plain-text answer for pasting into a chat (e.g. WhatsApp).
-// Quran citations carry the verse exactly as stored; other sources carry the stored span that
-// supports the claim. No text written by the model is presented as source text.
+// Quran citations carry the full verse exactly as stored; tafsir, book and hadith citations carry
+// the verified quote with its surrounding sentence from the stored passage. No text written by the
+// model is presented as source text.
 
 import type { AskResult } from "@/lib/pipeline";
+import { arabicDigits } from "@/lib/arabic";
+import { excerptAround, excerptText } from "./excerpt";
 
 export function buildCopyText(result: AskResult): string {
   const byId = new Map(result.passages.map((p) => [p.id, p]));
@@ -12,9 +15,12 @@ export function buildCopyText(result: AskResult): string {
       const p = byId.get(id);
       if (!p) continue;
       if (p.kind === "quran") {
-        lines.push(`﴿${p.text}﴾ [${p.refLabel}]`);
+        const ref = p.surahName ? `سورة ${p.surahName}، الآية ${arabicDigits(p.ayah ?? 0)}` : p.refLabel;
+        lines.push(`﴿${p.text}﴾ [${ref}]`);
       } else if (claim.match.passage_id === id) {
-        lines.push(`«${p.text.slice(claim.match.start, claim.match.end)}» (${p.refLabel})`);
+        const quote = excerptText(excerptAround(p.text, claim.match.start, claim.match.end));
+        const grade = p.kind === "hadith" && p.grade ? ` — ${p.grade}` : "";
+        lines.push(`«${quote}» (${p.refLabel}${grade})`);
       } else {
         lines.push(`(${p.refLabel})`);
       }

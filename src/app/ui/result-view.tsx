@@ -1,7 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { AskResult, AttemptLog, RetrievedPassage } from "@/lib/pipeline";
+import type { AskResult, AttemptLog, ClaimResult, RetrievedPassage } from "@/lib/pipeline";
+import { excerptAround } from "./excerpt";
 import { arabicDigits } from "@/lib/arabic";
 import { buildCopyText } from "./copy-text";
 import { EvidenceTag } from "./evidence-tag";
@@ -39,6 +40,49 @@ function CitationChip({ passage, onOpen }: { passage: RetrievedPassage; onOpen: 
       {passage.refLabel}
       {passage.kind === "hadith" && passage.grade && <span className="ms-1.5 whitespace-nowrap text-sm text-ink-2">({passage.grade})</span>}
     </button>
+  );
+}
+
+/**
+ * The source text under a claim, always from the stored passages: the full verse for Quran
+ * citations; for tafsir, books and hadith, the verified quote with its surrounding sentence.
+ */
+function Evidence({ claim, byId }: { claim: ClaimResult; byId: Map<string, RetrievedPassage> }) {
+  const blocks = claim.passage_ids
+    .map((id) => byId.get(id))
+    .filter((p): p is RetrievedPassage => !!p && (p.kind === "quran" || claim.match.passage_id === p.id));
+  if (!blocks.length) return null;
+  return (
+    <div className="mt-3 flex flex-col gap-2">
+      {blocks.map((p) => {
+        if (p.kind === "quran") {
+          return (
+            <figure key={p.id} className="rounded-xl border border-line bg-paper px-4 py-3">
+              <blockquote className="quran-text !text-[1.25rem] !leading-[2.1]">﴿{p.text}﴾</blockquote>
+              <figcaption className="mt-1 text-sm text-ink-2">
+                {p.surahName ? `سورة ${p.surahName}، الآية ${arabicDigits(p.ayah ?? 0)}` : p.refLabel}
+              </figcaption>
+            </figure>
+          );
+        }
+        const x = excerptAround(p.text, claim.match.start, claim.match.end);
+        return (
+          <figure key={p.id} className="rounded-xl border-s-2 border-gold bg-paper px-4 py-3">
+            <blockquote className="text-[0.9375rem] leading-[1.9] text-ink-2">
+              {x.cutStart && "… "}
+              {x.before}
+              <mark className="quote">{x.quote}</mark>
+              {x.after}
+              {x.cutEnd && " …"}
+            </blockquote>
+            <figcaption className="mt-1 text-sm text-muted">
+              {p.refLabel}
+              {p.kind === "hadith" && p.grade ? ` — ${p.grade}` : ""}
+            </figcaption>
+          </figure>
+        );
+      })}
+    </div>
   );
 }
 
@@ -197,6 +241,7 @@ export function ResultView({ result, onNew }: { result: AskResult; onNew: () => 
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-[1.0625rem] leading-[1.85] text-pretty">{c.text}</p>
+                  <Evidence claim={c} byId={byId} />
                   <div className="mt-2 flex flex-wrap gap-2">
                     {c.passage_ids.map((id) => {
                       const p = byId.get(id);
