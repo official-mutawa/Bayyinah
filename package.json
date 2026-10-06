@@ -6,7 +6,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "ingest": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ingest.ts",
+    "ingest:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ingest.ts --checks-only",
+    "test:questions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/run.ts",
+    "test:adapters": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/adapters.ts"
   },
   "dependencies": {
     "next": "16.3.8",

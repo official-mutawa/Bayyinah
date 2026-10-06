@@ -9,6 +9,15 @@ Every AI tool, skill and model used in this project, as required by the challeng
 | Claude Code (desktop app, Code tab) | https://claude.com/claude-code | Anthropic Commercial Terms | Coding agent: cloned the repo, scaffolded the Next.js app, set up the Arabic RTL layout, wrote project rules and this file |
 | Claude Opus 5.5 (`claude-opus-5-5`) | https://www.anthropic.com/claude | Anthropic Commercial Terms | Model behind Claude Code for all of the above |
 
+## Models inside the app (runtime)
+
+Called through the OpenAI REST API with `fetch` (no SDK). Model names come from `OPENAI_MODEL` and `OPENAI_EMBED_MODEL`; the defaults below were checked against the OpenAI models endpoint on 2026-10-06.
+
+| Name | Source | License | Used for |
+| --- | --- | --- | --- |
+| OpenAI `gpt-5.4-mini` (default `OPENAI_MODEL`) | https://platform.openai.com/docs/models | OpenAI Services Agreement | Rewriting the question into 2-3 Arabic search queries; drafting the answer from retrieved passages only (strict JSON Schema); the second, independent check of every claim against its cited passages |
+| OpenAI `text-embedding-3-small`, 256 dimensions (default `OPENAI_EMBED_MODEL`) | https://platform.openai.com/docs/guides/embeddings | OpenAI Services Agreement | Meaning search: passage embeddings precomputed by the ingest script, query embeddings at request time |
+
 ## Planning and research tools
 
 Used while planning and building the project. None of these are part of the running app.

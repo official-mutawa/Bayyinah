@@ -1,0 +1,37 @@
+{
+  "sources": [
+    {
+      "id": "quran",
+      "kind": "quran",
+      "label": "القرآن الكريم",
+      "format": "tanzil-xml",
+      "file": "quran-uthmani.xml",
+      "sha256": "<sha256 of the file as delivered>",
+      "attribution": "<who provided the text>",
+      "notice": "<notice the license requires, if any>",
+      "license": "<license or terms of use>",
+      "url": "<where it came from>",
+      "version": "<edition or version>"
+    },
+    {
+      "id": "example-hadith",
+      "kind": "hadith",
+      "label": "<اسم المجموعة>",
+      "format": "json",
+      "file": "<file>.json",
+      "attribution": "<who provided the data>",
+      "license": "<license>",
+      "version": "<edition, commit or date>",
+      "fields": { "records": "hadiths", "id": "number", "text": "text", "grade": "grade", "ref": "{source}، رقم {number}" }
+    },
+    {
+      "id": "example-book",
+      "kind": "text",
+      "label": "<اسم الكتاب>",
+      "format": "text",
+      "file": "<file>.txt",
+      "attribution": "<author / publisher>",
+      "license": "<license or permission>"
+    }
+  ]
+}

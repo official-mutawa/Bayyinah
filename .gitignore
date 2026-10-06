@@ -182,3 +182,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Source data and anything derived from it stay out of git until the sources are approved.
+/sources/*
+!/sources/README.md
+!/sources/manifest.example.json
+/data/

@@ -1,0 +1,3 @@
+# Source files are stored exactly as delivered: no line-ending conversion.
+sources/** -text
+*.bin binary
