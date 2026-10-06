@@ -35,7 +35,7 @@ Sources come only from the approved source plan (the challenge's official scient
 
 | Source | Origin and version | Used as | In this repo |
 | --- | --- | --- | --- |
-| القرآن الكريم | King Fahd Glorious Quran Printing Complex (Madinah Mushaf, Hafs narration). Downloaded from «الموسوعة القرآنية quranpedia.net», https://quranpedia.net/dumps, file `mushafs-1.json.gz`, version 2026-10-06 | The only source of verse text, shown exactly as stored (6236 verses) | Yes, with attribution |
+| القرآن الكريم | نص المصحف موافق لطبعة مجمع الملك فهد لطباعة المصحف الشريف (مصحف المدينة النبوية، رواية حفص عن عاصم). Downloaded from «الموسوعة القرآنية quranpedia.net», https://quranpedia.net/dumps, file `mushafs-1.json.gz`, version 2026-10-06 | The only source of verse text, shown exactly as stored (6236 verses) | Yes, with attribution |
 | التفسير الميسر (Al-Tafsir Al-Muyassar) | King Fahd Glorious Quran Printing Complex. Downloaded from «الموسوعة القرآنية quranpedia.net», https://quranpedia.net/dumps, file `tafsir-book-2012.json.gz`, version 2026-08-10 | One passage per verse, linked to that verse | Yes, with attribution |
 | الدرر السنية: الموسوعة الحديثية | Official public API (JSONP), https://dorar.net/article/389 | Live hadith search from the user's browser, with the muhaddith ruling and source exactly as returned (8 s timeout, cached) | No data stored |
 | بينات: أسئلة وأجوبة عن الإسلام (Osoul Center) | Official challenge package, PDF text layer | One passage per question (236 of 263 questions detected); quotes must come from the author's answer, not the question | No: encrypted bundle only |

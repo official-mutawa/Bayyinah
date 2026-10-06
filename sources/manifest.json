@@ -9,7 +9,7 @@
       "file": "mushafs-1.json.gz",
       "sha256": "18ecddb19fbab73f38b9f869cf4ca1f33796edcfdf055fa53985992c12c02c4d",
       "expectedCount": 6236,
-      "attribution": "مصحف المدينة النبوية برواية حفص عن عاصم، من إصدار مجمع الملك فهد لطباعة المصحف الشريف. مصدر التنزيل: «الموسوعة القرآنية quranpedia.net» (https://quranpedia.net/dumps)، الملف mushafs-1.json.gz، الإصدار 2026-10-06",
+      "attribution": "نص المصحف موافق لطبعة مجمع الملك فهد لطباعة المصحف الشريف (مصحف المدينة النبوية، رواية حفص عن عاصم). مصدر التنزيل: «الموسوعة القرآنية quranpedia.net» (https://quranpedia.net/dumps)، الملف mushafs-1.json.gz، الإصدار 2026-10-06",
       "license": "رخصة الموسوعة القرآنية: الاستعمال داخل التطبيقات مسموح، ونشر البيانات يلزم فيه ذكر «الموسوعة القرآنية quranpedia.net» مع الرابط ورقم الإصدار",
       "url": "https://quranpedia.net/dumps",
       "version": "2026-10-06 (mushafs-1.json.gz)"
