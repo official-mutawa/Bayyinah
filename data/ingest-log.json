@@ -1,6 +1,6 @@
 {
-  "checkedAt": "2026-10-06T21:48:08.481Z",
-  "total": 13237,
+  "checkedAt": "2026-10-06T21:55:44.989Z",
+  "total": 13735,
   "sources": [
     {
       "id": "quran",
@@ -39,7 +39,15 @@
       "label": "شموع النهار",
       "kind": "text",
       "count": 274,
-      "sha256": "3d9d02d9376bfcac2deafcb987c3fccb5e93ba19548eb0362accb6eb681eeb5a",
+      "sha256": "6bd64e75da31569098ceeb23700aeea4049cc7156fbec7d2563067a445da6801",
+      "version": "PDF من الحقيبة العلمية، استخراج ضوئي (Tesseract OCR 5.4، العربية) بتنظيف آلي فقط"
+    },
+    {
+      "id": "raheeq",
+      "label": "الرحيق المختوم",
+      "kind": "text",
+      "count": 498,
+      "sha256": "5b48d69ec269640d932f3fa02136525fe533e1c3a7aaaedcb73f13f63492a5f3",
       "version": "PDF من الحقيبة العلمية، استخراج ضوئي (Tesseract OCR 5.4، العربية) بتنظيف آلي فقط"
     }
   ]

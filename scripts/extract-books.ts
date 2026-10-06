@@ -183,7 +183,11 @@ function ocrBook(id: string, short: string): Chunk[] {
       if (headers.has(l)) continue; // running header
       if (/^[\s\-–_.()0-9٠-٩]*$/.test(l)) continue; // page number or rule
       if (l.length < 3 || arabicRatio(l) < 0.5) continue; // OCR junk (images, broken footnote marks)
-      if (l.length < 45 && /[:：]$/.test(l)) section = l.replace(/[:：]$/, "").trim();
+      if (l.length < 45 && /[:：]$/.test(l)) {
+        // A heading is Arabic words only (no digits or symbols), at least two of them.
+        const h = l.replace(/[:：]$/, "").trim();
+        if (/^[ء-يً-ْـ ]+$/.test(h) && h.split(" ").filter((w) => w.length >= 2).length >= 2) section = h;
+      }
       const masked = maskVerses(l);
       const para = paras[paras.length - 1];
       if (masked === VERSE_MARK && para[para.length - 1] === VERSE_MARK) continue; // one marker per verse block

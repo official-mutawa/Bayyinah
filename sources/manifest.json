@@ -90,7 +90,7 @@
       "license": "محفوظ الحقوق؛ يُستعمل داخل التطبيق ولا يُنشر نصه",
       "ocr": true,
       "version": "PDF من الحقيبة العلمية، استخراج ضوئي (Tesseract OCR 5.4، العربية) بتنظيف آلي فقط",
-      "sha256": "3d9d02d9376bfcac2deafcb987c3fccb5e93ba19548eb0362accb6eb681eeb5a"
+      "sha256": "6bd64e75da31569098ceeb23700aeea4049cc7156fbec7d2563067a445da6801"
     },
     {
       "id": "raheeq",
@@ -99,10 +99,12 @@
       "private": true,
       "label": "الرحيق المختوم",
       "format": "book-chunks",
-      "file": "",
-      "excluded": "ملف PDF في الحقيبة العلمية صفحاته صور ممسوحة، فيحتاج استخراجًا ضوئيًا (OCR) لم يُنفَّذ بعد",
+      "file": "raheeq.chunks.json",
       "attribution": "من الحقيبة العلمية الرسمية للتحدي",
-      "license": "محفوظ الحقوق"
+      "license": "محفوظ الحقوق؛ يُستعمل داخل التطبيق ولا يُنشر نصه",
+      "ocr": true,
+      "version": "PDF من الحقيبة العلمية، استخراج ضوئي (Tesseract OCR 5.4، العربية) بتنظيف آلي فقط",
+      "sha256": "5b48d69ec269640d932f3fa02136525fe533e1c3a7aaaedcb73f13f63492a5f3"
     },
     {
       "id": "barahin",
