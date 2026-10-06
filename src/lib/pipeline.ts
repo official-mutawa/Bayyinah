@@ -1,0 +1,467 @@
+// Question -> retrieval -> grounded draft -> verification. Emits real stage events.
+
+import { BM25 } from "./bm25.ts";
+import { findQuote, normalizeMapped } from "./arabic.ts";
+import { loadCorpus } from "./corpus.ts";
+import type { Passage, PassageKind } from "./corpus.ts";
+import { chatModel, embed, embedModel, structuredResponse } from "./openai.ts";
+import { VectorStore } from "./vectors.ts";
+
+// ---------- Types shared with the UI ----------
+
+export type StageId = "rewriting" | "search" | "drafting" | "verifying" | "redrafting";
+
+export interface StageSource {
+  id: string;
+  label: string;
+  kind: PassageKind;
+}
+
+export type PipelineEvent =
+  | {
+      type: "stage";
+      stage: StageId;
+      state: "active" | "done";
+      /** For "search": which source is being searched */
+      source?: StageSource;
+      queries?: string[];
+      count?: number;
+      passed?: number;
+      total?: number;
+    }
+  | { type: "result"; result: AskResult }
+  | { type: "error"; message: string };
+
+export interface RetrievedPassage extends Passage {
+  /** Which searches found it: keyword (BM25) and/or meaning (embeddings) */
+  via: ("keyword" | "meaning")[];
+}
+
+export interface ClaimResult {
+  text: string;
+  passage_ids: string[];
+  supporting_quote: string;
+  /** Span of the quote inside the stored text of `passage_id` */
+  match: { passage_id: string; start: number; end: number };
+  codeCheck: "pass";
+  modelCheck: { verdict: "supported"; reason: string };
+}
+
+export interface AttemptLog {
+  attempt: number;
+  status: "answer" | "abstain";
+  claims: number;
+  issues: string[];
+  verdicts: { claim: string; verdict: "supported" | "not_supported"; reason: string }[];
+}
+
+export interface AskResult {
+  status: "answer" | "abstain";
+  claims: ClaimResult[];
+  abstain_reason: string;
+  missing: string;
+  /** True only when every claim passed both the code check and the model check */
+  verified: boolean;
+  /** Why we abstained: the model chose to, or verification failed twice */
+  abstainCause: "model" | "verification" | null;
+  queries: string[];
+  passages: RetrievedPassage[];
+  attempts: AttemptLog[];
+  models: { chat: string; embed: string };
+  ms: number;
+}
+
+// ---------- Index (built once per server instance) ----------
+
+interface SourceIndex extends StageSource {
+  ids: string[];
+  bm25: BM25;
+}
+
+interface Index {
+  byId: Map<string, Passage>;
+  /** One searchable part per source, Quran first, then hadith, then other texts */
+  sources: SourceIndex[];
+  vectors: VectorStore;
+}
+
+const KIND_ORDER: Record<PassageKind, number> = { quran: 0, hadith: 1, text: 2 };
+
+let indexPromise: Promise<Index> | null = null;
+
+export function getIndex(): Promise<Index> {
+  indexPromise ??= Promise.resolve().then(() => {
+    const { passages, sources } = loadCorpus();
+    const vectors = new VectorStore();
+    const missing = passages.filter((p) => !vectors.has(p.id)).length;
+    if (missing) throw new Error(`${missing} passages have no embedding; run the ingest script`);
+    return {
+      byId: new Map(passages.map((p) => [p.id, p])),
+      sources: [...sources]
+        .sort((a, b) => KIND_ORDER[a.kind] - KIND_ORDER[b.kind])
+        .map((s) => {
+          const own = passages.filter((p) => p.sourceId === s.id);
+          return { id: s.id, label: s.label, kind: s.kind, ids: own.map((p) => p.id), bm25: new BM25(own.map((p) => p.text)) };
+        }),
+      vectors,
+    };
+  });
+  indexPromise.catch(() => (indexPromise = null));
+  return indexPromise;
+}
+
+// ---------- Step 1: query rewriting ----------
+
+function rewriteInstructions(sources: StageSource[]): string {
+  return `You turn a question into Arabic search queries for a library containing: ${sources.map((s) => s.label).join("، ")}.
+Return 2 or 3 short queries (2 to 8 words each) in Arabic. Use words likely to appear in those texts, including classical synonyms of the question's key terms.
+Do not add assumptions, positions, people, places or facts the user did not state. Do not answer the question.`;
+}
+
+async function rewrite(question: string, sources: StageSource[]): Promise<string[]> {
+  const out = await structuredResponse<{ queries: string[] }>({
+    name: "search_queries",
+    instructions: rewriteInstructions(sources),
+    input: question,
+    maxOutputTokens: 2000,
+    timeoutMs: 30000,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["queries"],
+      properties: { queries: { type: "array", items: { type: "string" } } },
+    },
+  });
+  return out.queries.map((q) => q.trim()).filter(Boolean).slice(0, 3);
+}
+
+// ---------- Step 2: hybrid retrieval ----------
+
+const RRF_K = 60;
+const LIST_DEPTH = 20;
+const FINAL_COUNT = 10;
+const MIN_PER_SOURCE = 2;
+
+type Ranked = { scores: Map<string, number>; via: Map<string, Set<"keyword" | "meaning">> };
+
+function fuse(lists: { ids: string[]; via: "keyword" | "meaning" }[]): Ranked {
+  const scores = new Map<string, number>();
+  const via = new Map<string, Set<"keyword" | "meaning">>();
+  for (const list of lists) {
+    list.ids.forEach((id, rank) => {
+      scores.set(id, (scores.get(id) ?? 0) + 1 / (RRF_K + rank + 1));
+      if (!via.has(id)) via.set(id, new Set());
+      via.get(id)!.add(list.via);
+    });
+  }
+  return { scores, via };
+}
+
+function searchCorpus(
+  part: { ids: string[]; bm25: BM25 },
+  vectors: VectorStore,
+  queries: string[],
+  queryVectors: Float32Array[]
+): Ranked {
+  const lists: { ids: string[]; via: "keyword" | "meaning" }[] = [];
+  queries.forEach((q, i) => {
+    lists.push({ ids: part.bm25.search(q, LIST_DEPTH).map(([d]) => part.ids[d]), via: "keyword" });
+    lists.push({ ids: vectors.search(queryVectors[i], part.ids, LIST_DEPTH).map(([id]) => id), via: "meaning" });
+  });
+  return fuse(lists);
+}
+
+function select(index: Index, ranked: Ranked[]): RetrievedPassage[] {
+  const score = new Map<string, number>();
+  const via = new Map<string, Set<"keyword" | "meaning">>();
+  for (const r of ranked) {
+    r.scores.forEach((s, id) => score.set(id, s));
+    r.via.forEach((v, id) => via.set(id, v));
+  }
+  const byScore = (a: string, b: string) => (score.get(b) ?? 0) - (score.get(a) ?? 0);
+  const picked: string[] = [];
+  // Reserve a few places for each source, then fill by fused score across sources.
+  const reserve = Math.max(1, Math.min(MIN_PER_SOURCE, Math.floor(FINAL_COUNT / Math.max(1, ranked.length))));
+  for (const r of ranked) picked.push(...[...r.scores.keys()].sort(byScore).slice(0, reserve));
+  for (const id of [...score.keys()].sort(byScore)) {
+    if (picked.length >= FINAL_COUNT) break;
+    if (!picked.includes(id)) picked.push(id);
+  }
+  return picked.sort(byScore).map((id) => ({
+    ...index.byId.get(id)!,
+    via: [...(via.get(id) ?? [])].sort() as ("keyword" | "meaning")[],
+  }));
+}
+
+// ---------- Step 3: grounded draft ----------
+
+interface Draft {
+  status: "answer" | "abstain";
+  claims: { text: string; passage_ids: string[]; supporting_quote: string }[];
+  abstain_reason: string;
+  missing: string;
+}
+
+const DRAFT_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["status", "claims", "abstain_reason", "missing"],
+  properties: {
+    status: { type: "string", enum: ["answer", "abstain"] },
+    claims: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["text", "passage_ids", "supporting_quote"],
+        properties: {
+          text: { type: "string" },
+          passage_ids: { type: "array", items: { type: "string" } },
+          supporting_quote: { type: "string" },
+        },
+      },
+    },
+    abstain_reason: { type: "string" },
+    missing: { type: "string" },
+  },
+};
+
+const DRAFT_INSTRUCTIONS = `You draft short Arabic answers for a Muslim daʿi (caller to Islam) who is in a live conversation with a non-Muslim and was asked a hard question. The daʿi reviews your draft before using it. You are not a mufti and this is never a fatwa.
+
+You receive the QUESTION and PASSAGES from the approved library (Quran verses, hadith, and other approved texts), each with an id and its type. Use ONLY these passages. Do not use outside knowledge, tafsir, history, or scholars' opinions that the passages do not state.
+
+To answer, set status "answer":
+- Write 1 to 5 claims. Each claim is ONE short sentence in calm, clear Modern Standard Arabic that the daʿi can relay.
+- passage_ids: only ids from PASSAGES that directly support the claim. Prefer one passage per claim; list the passage containing the quote first.
+- supporting_quote: copy character for character a contiguous span of 3 to 20 words from the first cited passage that supports the claim. Keep its spelling and diacritics exactly; do not join separate places; do not add words.
+- Never write Quran text inside a claim: do not quote, paraphrase or restate the wording of a verse. Refer to it instead, for example "تبيّن الآية أن ..." or "تنهى الآية عن ...". The app shows the stored verse text itself.
+- Attribute words to the Prophet ﷺ, a companion, a scholar or an author only when the passage itself attributes them.
+- No fatwa, no ruling for a personal case, no claim of consensus (never say أجمع العلماء), no statements about what scholars hold, no judgment on anyone's fate.
+- abstain_reason must be "". missing is "" unless part of the question is not covered by the passages; then name that part briefly.
+
+Abstain (status "abstain", claims []) when:
+- the passages do not clearly and directly answer the question, or only touch it loosely;
+- answering needs interpretation, a fiqh ruling, or historical context that the passages do not state;
+- the asker wants a fatwa for a specific personal situation;
+- the question is a major issue that scholars dispute;
+- the question asks for a judgment on a specific person or group (for example who is in Paradise or Hell).
+When abstaining: abstain_reason is one or two calm Arabic sentences explaining why; missing says in Arabic what evidence or expertise would be needed. Never accuse the asker of bad intent.`;
+
+function formatPassages(passages: RetrievedPassage[]): string {
+  return passages
+    .map((p) => {
+      const type = p.kind === "quran" ? "آية" : p.kind === "hadith" ? "حديث" : "نص";
+      const label = `${type} — ${p.refLabel}${p.grade ? ` — ${p.grade}` : ""}`;
+      const text = p.text.length > 4000 ? `${p.text.slice(0, 4000)} …` : p.text;
+      return `[${p.id}] (${label})\n${text}`;
+    })
+    .join("\n\n");
+}
+
+async function draft(question: string, passages: RetrievedPassage[], feedback: string | null): Promise<Draft> {
+  let input = `QUESTION:\n${question}\n\nPASSAGES:\n${formatPassages(passages)}`;
+  if (feedback) input += `\n\nYOUR PREVIOUS DRAFT FAILED THESE CHECKS. Fix every issue, drop claims you cannot support exactly, or abstain:\n${feedback}`;
+  return structuredResponse<Draft>({
+    name: "grounded_answer",
+    instructions: DRAFT_INSTRUCTIONS,
+    input,
+    schema: DRAFT_SCHEMA,
+    effort: "medium",
+    maxOutputTokens: 12000,
+    timeoutMs: 90000,
+  });
+}
+
+// ---------- Step 4: code checks ----------
+
+interface CheckedClaim {
+  claim: Draft["claims"][number];
+  issues: string[];
+  match: ClaimResult["match"] | null;
+}
+
+function wordWindows(text: string, size: number): Set<string> {
+  const words = normalizeMapped(text, true).text.split(" ").filter(Boolean);
+  const out = new Set<string>();
+  for (let i = 0; i + size <= words.length; i++) out.add(words.slice(i, i + size).join(" "));
+  return out;
+}
+
+function codeCheck(d: Draft, passages: RetrievedPassage[]): CheckedClaim[] {
+  const byId = new Map(passages.map((p) => [p.id, p]));
+  return d.claims.map((claim) => {
+    const issues: string[] = [];
+    let match: CheckedClaim["match"] = null;
+    if (!claim.text.trim()) issues.push("empty claim text");
+    if (!claim.passage_ids.length) issues.push("no passage cited");
+    const unknown = claim.passage_ids.filter((id) => !byId.has(id));
+    if (unknown.length) issues.push(`cites passages that were not retrieved: ${unknown.join(", ")}`);
+    for (const id of claim.passage_ids) {
+      const p = byId.get(id);
+      if (!p) continue;
+      const span = findQuote(p.text, claim.supporting_quote);
+      if (span && !match) match = { passage_id: id, ...span };
+    }
+    if (!match) issues.push("supporting_quote does not appear in any cited passage; copy it exactly");
+    // The model must not write verse wording itself.
+    const claimWindows = wordWindows(claim.text, 4);
+    for (const id of claim.passage_ids) {
+      const p = byId.get(id);
+      if (p?.kind !== "quran") continue;
+      if ([...wordWindows(p.text, 4)].some((w) => claimWindows.has(w))) {
+        issues.push(`claim text repeats wording of ${id}; refer to the verse instead of quoting it`);
+      }
+    }
+    return { claim, issues, match };
+  });
+}
+
+// ---------- Step 5: second model check ----------
+
+const VERIFY_INSTRUCTIONS = `You are a strict verifier. Each item has one claim (Arabic) and the full text of the passages it cites.
+For each item decide only whether those passages, read on their own, support the claim.
+"supported": the passages state it or directly entail it, without outside knowledge, interpretation or added detail.
+"not_supported": anything else, including claims that go beyond, generalize, or add to what the passages say.
+Give a short reason in Arabic (one sentence). Return one result per item, in the same order, with its claim_index.`;
+
+async function verify(
+  claims: Draft["claims"],
+  byId: Map<string, Passage>
+): Promise<{ claim_index: number; verdict: "supported" | "not_supported"; reason: string }[]> {
+  const items = claims.map((c, i) => ({
+    claim_index: i,
+    claim: c.text,
+    passages: c.passage_ids.map((id) => byId.get(id)).filter(Boolean).map((p) => ({ id: p!.id, reference: p!.refLabel, text: p!.text })),
+  }));
+  const out = await structuredResponse<{ results: { claim_index: number; verdict: "supported" | "not_supported"; reason: string }[] }>({
+    name: "claim_verification",
+    instructions: VERIFY_INSTRUCTIONS,
+    input: JSON.stringify(items),
+    effort: "low",
+    maxOutputTokens: 6000,
+    timeoutMs: 60000,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      required: ["results"],
+      properties: {
+        results: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["claim_index", "verdict", "reason"],
+            properties: {
+              claim_index: { type: "integer" },
+              verdict: { type: "string", enum: ["supported", "not_supported"] },
+              reason: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+  });
+  return out.results;
+}
+
+// ---------- Orchestration ----------
+
+export async function ask(question: string, emit: (e: PipelineEvent) => void): Promise<AskResult> {
+  const started = Date.now();
+  const index = await getIndex();
+
+  const sourceInfo = index.sources.map(({ id, label, kind }) => ({ id, label, kind }));
+
+  emit({ type: "stage", stage: "rewriting", state: "active" });
+  const rewritten = await rewrite(question, sourceInfo);
+  const queries = [question, ...rewritten.filter((q) => q !== question)];
+  emit({ type: "stage", stage: "rewriting", state: "done", queries: rewritten });
+
+  const queryVectors = await embed(queries, 30000);
+
+  // Search every source (fast, in memory), choose the evidence set, then report per source
+  // how many of its passages were kept, so "found 4 verses" is literally true.
+  const ranked = index.sources.map((part) => searchCorpus(part, index.vectors, queries, queryVectors));
+  const passages = select(index, ranked);
+  for (const part of index.sources) {
+    const source = { id: part.id, label: part.label, kind: part.kind };
+    emit({ type: "stage", stage: "search", state: "active", source });
+    emit({ type: "stage", stage: "search", state: "done", source, count: passages.filter((p) => p.sourceId === part.id).length });
+  }
+  const attempts: AttemptLog[] = [];
+  let feedback: string | null = null;
+
+  const base = {
+    queries: rewritten,
+    passages,
+    attempts,
+    models: { chat: chatModel(), embed: embedModel() },
+  };
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const stage: StageId = attempt === 1 ? "drafting" : "redrafting";
+    emit({ type: "stage", stage, state: "active" });
+    const d = await draft(question, passages, feedback);
+    emit({ type: "stage", stage, state: "done" });
+
+    if (d.status === "abstain" || d.claims.length === 0) {
+      attempts.push({ attempt, status: "abstain", claims: 0, issues: [], verdicts: [] });
+      return {
+        ...base,
+        status: "abstain",
+        claims: [],
+        abstain_reason: d.abstain_reason || "لا تكفي النصوص المسترجعة للإجابة عن هذا السؤال.",
+        missing: d.missing,
+        verified: false,
+        abstainCause: "model",
+        ms: Date.now() - started,
+      };
+    }
+
+    emit({ type: "stage", stage: "verifying", state: "active" });
+    const checked = codeCheck(d, passages);
+    const verdicts = await verify(d.claims, index.byId);
+    const log: AttemptLog = { attempt, status: "answer", claims: d.claims.length, issues: [], verdicts: [] };
+    const problems: string[] = [];
+    checked.forEach((c, i) => {
+      const v = verdicts.find((r) => r.claim_index === i);
+      log.verdicts.push({ claim: c.claim.text, verdict: v?.verdict ?? "not_supported", reason: v?.reason ?? "لم يُرجِع المدقق حكمًا" });
+      for (const issue of c.issues) problems.push(`Claim ${i + 1}: ${issue}`);
+      if (v?.verdict !== "supported") problems.push(`Claim ${i + 1}: verifier says not supported by its passages (${v?.reason ?? "no verdict"})`);
+    });
+    log.issues = problems;
+    attempts.push(log);
+    const passed = checked.filter((c, i) => !c.issues.length && log.verdicts[i].verdict === "supported").length;
+    emit({ type: "stage", stage: "verifying", state: "done", passed, total: checked.length });
+
+    if (!problems.length) {
+      return {
+        ...base,
+        status: "answer",
+        claims: checked.map((c, i) => ({
+          ...c.claim,
+          match: c.match!,
+          codeCheck: "pass",
+          modelCheck: { verdict: "supported", reason: log.verdicts[i].reason },
+        })),
+        abstain_reason: "",
+        missing: d.missing,
+        verified: true,
+        abstainCause: null,
+        ms: Date.now() - started,
+      };
+    }
+    feedback = problems.join("\n");
+  }
+
+  return {
+    ...base,
+    status: "abstain",
+    claims: [],
+    abstain_reason: "لم نتمكن من التحقق من أن كل جملة في المسودة مدعومة بنصها، فلم نعرض إجابة.",
+    missing: "نصوص أوضح دلالة على السؤال، أو مراجعة مختص.",
+    verified: false,
+    abstainCause: "verification",
+    ms: Date.now() - started,
+  };
+}

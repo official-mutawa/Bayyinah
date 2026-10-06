@@ -1,24 +1,394 @@
 @import "tailwindcss";
 
+/* Project identity (same as the presentation): milk, beige, deep green, gold. Light only. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --paper: #fbf7ef; /* milk: page background, fields inside cards */
+  --surface: #f1e8d8; /* beige: cards and panels */
+  --line: #e3d6bc; /* borders */
+  --ink: #1e1b16; /* main text */
+  --ink-2: #4a4336; /* secondary text */
+  --muted: #6b6252; /* muted text */
+  --primary: #24493f; /* deep green: buttons, active states, verified badge */
+  --on-primary: #fbf7ef;
+  --gold: #b08a3e; /* small details and ornament only, never body text */
+  --gold-ink: #7a5f2a; /* gold text on light backgrounds */
+  --shadow: rgb(30 27 22 / 0.07);
+  --focus: #24493f;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-line: var(--line);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-gold: var(--gold);
+  --color-gold-ink: var(--gold-ink);
   --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
+  --font-heading: var(--font-amiri), var(--font-plex-arabic), serif;
+  --font-quran: var(--font-amiri-quran), var(--font-amiri), serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  background: var(--paper);
+  color-scheme: light;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  /* Transparent so the paper grain layer (behind content) shows; html carries the paper color. */
+  background: transparent;
+  color: var(--ink);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: var(--line);
+  color: var(--ink);
+}
+
+/* Quran text: rendered exactly as stored, in Amiri Quran. */
+.quran-text {
+  font-family: var(--font-quran);
+  font-size: 1.375rem;
+  line-height: 2.25;
+  word-spacing: 0.04em;
+}
+
+/* Verified supporting quote inside stored text. */
+mark.quote {
+  background: var(--line);
+  color: inherit;
+  border-bottom: 2px solid var(--gold);
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+  padding-inline: 0.125rem;
+}
+
+/* ---------- Ornament (hand-drawn SVG, palette colors only) ---------- */
+
+/* Light ornamental corners on Quran (and tafsir) passage cards. */
+.ornate-corners {
+  position: relative;
+  padding: 1.25rem 1.25rem;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23B08A3E' stroke-width='1'%3E%3Cpath d='M1 19V6a5 5 0 0 1 5-5h13'/%3E%3Cpath d='M7 4l3 3-3 3-3-3z'/%3E%3C/svg%3E") top left / 20px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23B08A3E' stroke-width='1'%3E%3Cpath d='M19 19V6a5 5 0 0 0-5-5H1'/%3E%3Cpath d='M13 4l3 3-3 3-3-3z'/%3E%3C/svg%3E") top right / 20px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23B08A3E' stroke-width='1'%3E%3Cpath d='M1 1v13a5 5 0 0 0 5 5h13'/%3E%3Cpath d='M7 10l3 3-3 3-3-3z'/%3E%3C/svg%3E") bottom left / 20px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' fill='none' stroke='%23B08A3E' stroke-width='1'%3E%3Cpath d='M19 1v13a5 5 0 0 1-5 5H1'/%3E%3Cpath d='M13 10l3 3-3 3-3-3z'/%3E%3C/svg%3E") bottom right / 20px no-repeat;
+}
+
+/* <details> disclosure chevron, drawn for RTL and rotated when open. */
+details > summary {
+  list-style: none;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] > summary .chevron {
+  rotate: -90deg;
+}
+
+dialog.sheet::backdrop {
+  background: rgb(30 27 22 / 0.42);
+}
+dialog.sheet {
+  overscroll-behavior: contain;
+}
+
+/* ---------- Book: opens and turns pages while the real stages run ---------- */
+/* Arabic books open from the right: the spine is in the middle, pages turn from left to right.
+   Physical left/right here describe the drawing itself, not the reading layout. */
+
+.book-stage {
+  display: grid;
+  place-items: center;
+  height: 150px;
+  perspective: 900px;
+}
+.book {
+  --cover: var(--primary);
+  --emblem: var(--gold);
+  position: relative;
+  width: 196px;
+  height: 126px;
+  transform-style: preserve-3d;
+}
+.book[data-kind="hadith"] {
+  --cover: var(--gold-ink);
+  --emblem: var(--surface);
+}
+.book[data-kind="text"] {
+  --cover: var(--ink-2);
+  --emblem: var(--gold);
+}
+.book-half {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+}
+.book-page {
+  border: 3px solid var(--cover);
+  border-right-width: 0; /* spine side of the left page */
+  border-radius: 6px 0 0 6px;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='9'%3E%3Cpath d='M0 7.5H80' stroke='%23E3D6BC' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-origin: content-box;
+  background-clip: content-box;
+  padding: 14px 10px;
+  box-shadow: 0 1px 2px var(--shadow);
+}
+.book-leaf {
+  top: 3px;
+  height: calc(100% - 6px);
+  left: 3px;
+  width: calc(50% - 3px);
+  transform-origin: right center;
+  border-radius: 3px 0 0 3px;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='9'%3E%3Cpath d='M0 7.5H80' stroke='%23E3D6BC' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-origin: content-box;
+  background-clip: content-box;
+  padding: 11px 7px;
+  outline: 1px solid var(--line);
+  opacity: 0;
+}
+.book-cover {
+  transform-origin: right center;
+  transform-style: preserve-3d;
+  transform: rotateY(-180deg);
+}
+.book-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.book-face-front {
+  display: grid;
+  place-items: center;
+  border-radius: 6px 0 0 6px;
+  background: var(--cover);
+  color: var(--emblem);
+  box-shadow: 0 2px 6px var(--shadow);
+}
+.book-face-back {
+  transform: rotateY(180deg);
+  border: 3px solid var(--cover);
+  border-left-width: 0; /* lands on the spine once the cover has turned */
+  border-radius: 0 6px 6px 0;
+  background-color: var(--paper);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='9'%3E%3Cpath d='M0 7.5H80' stroke='%23E3D6BC' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-origin: content-box;
+  background-clip: content-box;
+  padding: 14px 10px;
+}
+.book-static {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* On mount: the closed book slides to centre and opens, its cover swings over the spine,
+     then the pages start turning. Pure CSS, so it never waits on JavaScript timing. */
+  .book {
+    animation: book-slide 600ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+  .book-cover {
+    animation: cover-open 800ms cubic-bezier(0.2, 0, 0, 1) 120ms both;
+  }
+  .book-leaf {
+    animation: leaf-turn 2.4s cubic-bezier(0.45, 0, 0.25, 1) 0.95s infinite both;
+  }
+  .book-leaf:nth-child(3) {
+    animation-delay: 1.75s;
+  }
+  .book-leaf:nth-child(4) {
+    animation-delay: 2.55s;
+  }
+
+  .press {
+    transition-property: scale;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  .press:active:not(:disabled) {
+    scale: 0.96;
+  }
+  .chevron {
+    transition-property: rotate;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  }
+  .stage-active-dot {
+    animation: stage-pulse 1.2s ease-in-out infinite;
+  }
+}
+
+/* Reduced motion: no moving book; a static drawing and the stage text carry the progress. */
+@media (prefers-reduced-motion: reduce) {
+  .book-stage .book {
+    display: none;
+  }
+  .book-static {
+    display: block;
+  }
+}
+
+@keyframes book-slide {
+  from {
+    translate: 25% 0;
+  }
+  to {
+    translate: 0 0;
+  }
+}
+
+@keyframes cover-open {
+  from {
+    transform: rotateY(0deg);
+  }
+  to {
+    transform: rotateY(-180deg);
+  }
+}
+
+@keyframes leaf-turn {
+  0% {
+    transform: translateZ(1px) rotateY(0deg);
+    opacity: 0;
+  }
+  8% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateZ(1px) rotateY(-180deg);
+    opacity: 0;
+  }
+}
+
+@keyframes stage-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- Home (empty state): arch, floating library, paper ---------- */
+
+:root {
+  /* Book covers for the floating library only. */
+  --book-green: #24493f;
+  --book-burgundy: #6b2d2d;
+  --book-navy: #22324a;
+  --book-brown: #5b4330;
+}
+
+body {
+  overflow-x: clip;
+}
+
+/* Paper grain: a static, very faint noise behind all content (never over text). */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.12 0 0 0 0 0.1 0 0 0 0 0.08 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Floating library + vignette: a fixed layer behind the page, home state only. */
+.library {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 1;
+  transition: opacity 900ms ease-out, visibility 0s linear 0s;
+}
+.library::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 38%, transparent 55%, rgb(122 95 42 / 0.1) 100%);
+}
+.library[data-visible="false"] {
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 900ms ease-out, visibility 0s linear 900ms;
+}
+.float-book {
+  position: absolute;
+  opacity: var(--o);
+  filter: blur(var(--b));
+  transform: rotate(var(--r));
+  will-change: transform;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .float-book {
+    animation: float-drift var(--d) ease-in-out var(--delay) infinite;
+  }
+}
+.library[data-visible="false"] .float-book,
+:root[data-tab-hidden="true"] .float-book {
+  animation-play-state: paused;
+}
+@keyframes float-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) rotate(var(--r));
+  }
+  50% {
+    transform: translate3d(var(--dx), var(--dy), 0) rotate(calc(var(--r) + var(--dr)));
+  }
+}
+
+/* Manuscript page: beige, fine double gold hairline, soft shadow. */
+.manuscript {
+  background: var(--surface);
+  border: 1px solid var(--gold);
+  outline: 1px solid var(--gold);
+  outline-offset: -7px;
+  box-shadow:
+    0 1px 2px var(--shadow),
+    0 14px 36px rgb(30 27 22 / 0.09);
+}
+
+/* Entrances for the running state (opacity and transform only). */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-in {
+    animation: fade-in 420ms cubic-bezier(0.2, 0, 0, 1) both;
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }

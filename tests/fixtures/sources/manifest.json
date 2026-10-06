@@ -1,6 +1,6 @@
 {
   "sources": [
-    { "id": "t-txt", "kind": "text", "label": "مصدر تجريبي ١", "format": "tanzil-txt", "file": "sample.txt", "expectedCount": 2, "attribution": "fixture", "license": "test" },
+    { "id": "t-txt", "kind": "text", "label": "مصدر تجريبي ١", "format": "quran-txt", "file": "sample.txt", "expectedCount": 2, "attribution": "fixture", "license": "test" },
     { "id": "t-json", "kind": "hadith", "label": "مصدر تجريبي ٢", "format": "json", "file": "sample.json", "attribution": "fixture", "license": "test",
       "fields": { "records": "items", "id": "n", "text": "body", "grade": "level", "ref": "{source}، رقم {n}" } },
     { "id": "t-csv", "kind": "text", "label": "مصدر تجريبي ٣", "format": "csv", "file": "sample.csv", "attribution": "fixture", "license": "test",

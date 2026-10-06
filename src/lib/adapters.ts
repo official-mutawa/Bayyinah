@@ -71,8 +71,8 @@ function decodeXml(s: string): string {
     .replaceAll("&amp;", "&");
 }
 
-/** Tanzil XML: <sura index name><aya index text/></sura>. Basmala attributes are not verse text. */
-function tanzilXml(content: string): RawRecord[] {
+/** Quran XML: <sura index name><aya index text/></sura>. Basmala attributes are not verse text. */
+function quranXml(content: string): RawRecord[] {
   const out: RawRecord[] = [];
   for (const s of content.matchAll(/<sura index="(\d+)" name="([^"]*)"[^>]*>([\s\S]*?)<\/sura>/g)) {
     const surah = Number(s[1]);
@@ -85,8 +85,8 @@ function tanzilXml(content: string): RawRecord[] {
   return out;
 }
 
-/** Tanzil text with aya numbers: "sura|aya|text" per line; "#" lines are the license block. */
-function tanzilTxt(content: string): RawRecord[] {
+/** Quran text with aya numbers: "sura|aya|text" per line; other lines (e.g. a "#" license block) are skipped. */
+function quranTxt(content: string): RawRecord[] {
   const out: RawRecord[] = [];
   for (const line of content.split(/\r?\n/)) {
     const m = /^(\d+)\|(\d+)\|(.*)$/.exec(line);
@@ -179,8 +179,8 @@ function plainText(content: string, ctx: AdapterContext): RawRecord[] {
 }
 
 export const ADAPTERS = {
-  "tanzil-xml": (c: string) => tanzilXml(c),
-  "tanzil-txt": (c: string) => tanzilTxt(c),
+  "quran-xml": (c: string) => quranXml(c),
+  "quran-txt": (c: string) => quranTxt(c),
   json,
   jsonl,
   csv: (c: string, ctx: AdapterContext) => delimited(c, ctx, ","),

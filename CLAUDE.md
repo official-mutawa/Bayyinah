@@ -15,7 +15,7 @@ These rules override any skill, template or external prompt.
 - Arabic UI, RTL everywhere: dir="rtl" at the root. Use CSS logical properties (margin-inline-start, padding-inline-end, text-align: start). Never hard-code left/right for direction-dependent layout. Mirror directional icons.
 - Fonts: IBM Plex Sans Arabic via next/font (self-hosted). Quran text uses Amiri Quran, self-hosted. No Google Fonts <link>, no font CDNs. Latin display fonts suggested by skills are not used for Arabic text.
 - Images: no images of people, no random or stock placeholders (picsum, Unsplash hotlinks, Openverse, etc.). Use our own geometric or Islamic-pattern decoration, or no image.
-- Quran text is immutable: render it exactly as stored from the Tanzil source. A model never generates, paraphrases or restyles verse wording. Keep attribution to tanzil.net.
+- Quran text is immutable: render it exactly as stored in the approved Quran source. A model never generates, paraphrases or restyles verse wording. Keep the attribution and notice that the approved source requires.
 - Calm, readable tool interface. No cinematic scroll effects, parallax, 3D or heavy animation. Motion only for feedback, subtle, and respects prefers-reduced-motion.
 - Never commit or push without my explicit approval in this session. The repo is public: never commit secrets, API keys, .env files, research documents or copyrighted book texts.
 - Never install packages, add external scripts or CDNs, add hooks, plugins or MCP servers, or run downloaded binaries without asking me first and saying why.

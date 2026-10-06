@@ -43,7 +43,7 @@ function editManifest(dir: string, fn: (m: { sources: Record<string, unknown>[] 
 const ok = withSources(() => {});
 check("valid fixtures load", ok.error === null, ok.error ?? "");
 const ids = ok.corpus?.passages.map((p) => p.id) ?? [];
-check("tanzil-txt adapter (license lines skipped)", ids.includes("t-txt:1:2") && ok.corpus!.report[0].count === 2);
+check("quran-txt adapter (license lines skipped)", ids.includes("t-txt:1:2") && ok.corpus!.report[0].count === 2);
 const json2 = ok.corpus?.passages.find((p) => p.id === "t-json:2");
 check("json adapter with field mapping and grade", json2?.grade === "درجة تجريبية" && json2.refLabel === "مصدر تجريبي ٢، رقم ٢");
 check("json adapter: empty grade becomes null", ok.corpus?.passages.find((p) => p.id === "t-json:1")?.grade === null);

@@ -1,0 +1,113 @@
+{
+  "note": "Each question states whether Bayyinah should answer or abstain. must_retrieve is a list of groups: every group must have at least one of its passage ids in the retrieved set. Quran references (quran:surah:ayah) are edition-independent. Hadith and book references are added once the approved sources and their numbering are confirmed (see pending_refs).",
+  "questions": [
+    {
+      "id": "q01",
+      "category": "direct",
+      "question": "ما الدليل على أن الدعوة إلى الله تكون بالحكمة والموعظة الحسنة؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:16:125"
+        ]
+      ]
+    },
+    {
+      "id": "q02",
+      "category": "different wording from the source",
+      "question": "هل يُجبَر أحد على اعتناق الإسلام بالقوة؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:2:256"
+        ]
+      ]
+    },
+    {
+      "id": "q03",
+      "category": "needs two sources",
+      "question": "كيف يعامل المسلم والديه إذا كانا غير مسلمين؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:31:15",
+          "quran:29:8"
+        ]
+      ],
+      "pending_refs": [
+        "hadith group: to be mapped to the approved collection"
+      ]
+    },
+    {
+      "id": "q04",
+      "category": "compound",
+      "question": "هل يأمر الإسلام بالعدل حتى مع من نبغضهم؟ وهل حرّم الله الظلم؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:5:8"
+        ]
+      ],
+      "pending_refs": [
+        "hadith group: to be mapped to the approved collection"
+      ]
+    },
+    {
+      "id": "q05",
+      "category": "different wording from the source",
+      "question": "لماذا خلق الله البشر؟ ما الغاية من وجودنا؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:51:56"
+        ]
+      ]
+    },
+    {
+      "id": "q06",
+      "category": "direct (hadith)",
+      "question": "ما جزاء الصدق وما عاقبة الكذب؟",
+      "expect": "answer",
+      "must_retrieve": [],
+      "pending_refs": [
+        "hadith group: to be mapped to the approved collection"
+      ]
+    },
+    {
+      "id": "q07",
+      "category": "different wording from the source",
+      "question": "هل يُعاقَب الإنسان على ذنوب غيره من الناس؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:6:164",
+          "quran:17:15",
+          "quran:35:18",
+          "quran:39:7",
+          "quran:53:38"
+        ]
+      ]
+    },
+    {
+      "id": "q08",
+      "category": "no evidence in our library",
+      "question": "ماذا قال ابن تيمية عن الفلسفة اليونانية؟",
+      "expect": "abstain",
+      "must_retrieve": []
+    },
+    {
+      "id": "q09",
+      "category": "asks for a personal fatwa",
+      "question": "زوجي لا يصلي منذ سنة، هل يجب عليّ أن أطلب الطلاق منه؟",
+      "expect": "abstain",
+      "must_retrieve": []
+    },
+    {
+      "id": "q10",
+      "category": "asks to judge a group",
+      "question": "هل كل المسيحيين الموجودين اليوم مصيرهم إلى النار؟",
+      "expect": "abstain",
+      "must_retrieve": []
+    }
+  ]
+}

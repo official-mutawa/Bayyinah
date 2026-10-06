@@ -16,7 +16,7 @@ Copy `manifest.example.json` to `manifest.json` and add one entry per source:
 | `file` | yes | File name inside `sources/`. |
 | `attribution` | yes | Shown in the UI footer and README. |
 | `license` | yes | License or terms of use. |
-| `notice` | no | Notice the license requires to be shown (e.g. Tanzil's). |
+| `notice` | no | Notice the license requires to be shown alongside the text. |
 | `url`, `version` | no | Where it came from and which edition, commit or date. Logged by ingest. |
 | `sha256` | no | Ingest fails if the file no longer matches. |
 | `expectedCount` | no | Ingest fails if the passage count differs. A `quran` source must have 6236 verses. |
@@ -27,8 +27,8 @@ Copy `manifest.example.json` to `manifest.json` and add one entry per source:
 
 | `format` | Reads | Passage id | Reference |
 | --- | --- | --- | --- |
-| `tanzil-xml` | Tanzil XML (`<sura index name><aya index text/>`) | `surah:ayah` | surah name + ayah |
-| `tanzil-txt` | Tanzil text with aya numbers (`sura\|aya\|text`, `#` lines ignored) | `surah:ayah` | surah + ayah numbers |
+| `quran-xml` | Quran XML (`<sura index name><aya index text/>`) | `surah:ayah` | surah name + ayah |
+| `quran-txt` | Quran text with aya numbers (`sura\|aya\|text` per line, other lines ignored) | `surah:ayah` | surah + ayah numbers |
 | `json` | JSON array of records, or `fields.records` dot path to one | `fields.id` or position | `fields.ref` template |
 | `jsonl` | one JSON record per line | same | same |
 | `csv` / `tsv` | header row + records | same | same |

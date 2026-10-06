@@ -1,7 +1,11 @@
+import { AskApp } from "./ui/ask-app";
+import { SiteFooter } from "./ui/site-chrome";
+
 export default function Home() {
   return (
-    <main className="flex flex-1 items-center justify-center">
-      <h1 className="text-5xl font-bold">بيّنة</h1>
-    </main>
+    <>
+      <AskApp />
+      <SiteFooter />
+    </>
   );
 }
