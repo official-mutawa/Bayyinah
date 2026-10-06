@@ -6,7 +6,7 @@ Every AI tool, skill and model used in this project, as required by the challeng
 
 | Name | Source | License | Used for |
 | --- | --- | --- | --- |
-| Claude Code (desktop app, Code tab) | https://claude.com/claude-code | Anthropic Commercial Terms | Coding agent that wrote the application code under the author's direction: Next.js app and Arabic RTL UI, retrieval and verification pipeline, source adapters and ingest checks, rule-based PDF text extraction (`pdftotext`, no model touches religious text), tests, README and this file |
+| Claude Code (desktop app, Code tab) | https://claude.com/claude-code | Anthropic Commercial Terms | Coding agent that wrote the application code under the author's direction: Next.js app and Arabic RTL UI, retrieval and verification pipeline, source adapters and ingest checks, rule-based PDF text extraction (`pdftotext`, no model touches religious text), tests, README and this file. For the v2 rebuild (local branch, not deployed): the code audit, the evaluation harness (`eval/`), and draft golden-set questions and expected evidence, which are labelled as drafts for review by the author and a qualified reviewer |
 | Claude Opus 5.5 (`claude-opus-5-5`) | https://www.anthropic.com/claude | Anthropic Commercial Terms | Model behind Claude Code for all of the above |
 
 ## Models inside the app (runtime)

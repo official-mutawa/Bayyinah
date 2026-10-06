@@ -197,3 +197,6 @@ next-env.d.ts
 !/data/embeddings.json
 !/data/private.enc
 !/data/ingest-log.json
+
+# Local work for the v2 rebuild: decrypted text, analysis, eval runs, traces, golden set, screenshots.
+/local/
