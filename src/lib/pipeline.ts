@@ -3,7 +3,8 @@
 import { BM25 } from "./bm25.ts";
 import { findQuote, normalizeMapped } from "./arabic.ts";
 import { loadCorpus, loadManifest, sourceGroup } from "./corpus.ts";
-import { searchDorar } from "./dorar.ts";
+import { dorarId } from "./dorar-parse.ts";
+import type { DorarItem } from "./dorar-parse.ts";
 import type { Passage, PassageKind } from "./corpus.ts";
 import { chatModel, embed, embedModel, structuredResponse } from "./openai.ts";
 import { VectorStore } from "./vectors.ts";
@@ -398,17 +399,52 @@ async function verify(
 
 // ---------- Orchestration ----------
 
-export async function ask(question: string, emit: (e: PipelineEvent) => void): Promise<AskResult> {
+function stageSources(index: Index): StageSource[] {
+  const info: StageSource[] = index.sources.map(({ id, label, kind }) => ({ id, label, kind }));
+  if (index.hasDorar) info.push({ id: "dorar", label: "الدرر السنية", kind: "hadith" });
+  return info;
+}
+
+/** Step 1 on its own, for /api/queries. */
+export async function rewriteQuestion(question: string): Promise<string[]> {
+  return rewrite(question, stageSources(await getIndex()));
+}
+
+export interface AskOptions {
+  /** Queries already produced by /api/queries (skips the rewriting call) */
+  queries?: string[];
+  /** Hadith found by the user's browser on Dorar, exactly as returned */
+  hadith?: DorarItem[];
+  /** The browser could not reach Dorar */
+  hadithFailed?: boolean;
+}
+
+function hadithPassage(h: DorarItem): RetrievedPassage {
+  return {
+    id: dorarId(h),
+    sourceId: "dorar",
+    kind: "hadith",
+    sourceLabel: "الدرر السنية — الموسوعة الحديثية",
+    refLabel: [h.book, h.locator].filter(Boolean).join("، ") || "الدرر السنية",
+    text: h.text,
+    grade: h.grade ? `${h.grade}${h.muhaddith ? ` — ${h.muhaddith}` : ""}` : null,
+    via: ["keyword"],
+  };
+}
+
+export async function ask(question: string, emit: (e: PipelineEvent) => void, opts: AskOptions = {}): Promise<AskResult> {
   const started = Date.now();
   const index = await getIndex();
 
-  const sourceInfo: StageSource[] = index.sources.map(({ id, label, kind }) => ({ id, label, kind }));
-  if (index.hasDorar) sourceInfo.push({ id: "dorar", label: "الدرر السنية", kind: "hadith" });
-
-  emit({ type: "stage", stage: "rewriting", state: "active" });
-  const rewritten = await rewrite(question, sourceInfo);
+  let rewritten: string[];
+  if (opts.queries?.length) {
+    rewritten = opts.queries;
+  } else {
+    emit({ type: "stage", stage: "rewriting", state: "active" });
+    rewritten = await rewrite(question, stageSources(index));
+    emit({ type: "stage", stage: "rewriting", state: "done", queries: rewritten });
+  }
   const queries = [question, ...rewritten.filter((q) => q !== question)];
-  emit({ type: "stage", stage: "rewriting", state: "done", queries: rewritten });
 
   const queryVectors = await embed(queries, 30000);
 
@@ -429,22 +465,13 @@ export async function ask(question: string, emit: (e: PipelineEvent) => void): P
   }
   emit({ type: "stage", stage: "search", state: "done", source: quranStage, count: verses.size });
 
-  // 2. Hadith, live from Dorar (a failure is reported and the answer continues without it).
-  const hadith: RetrievedPassage[] = [];
-  if (index.hasDorar) {
+  // 2. Hadith: searched on Dorar by the user's browser (JSONP), passed in exactly as returned.
+  const hadith: RetrievedPassage[] = (opts.hadith ?? []).slice(0, DORAR_COUNT).map(hadithPassage);
+  if (index.hasDorar && (opts.hadith || opts.hadithFailed)) {
     const hadithStage: StageSource = { id: "dorar", label: "الحديث (الدرر السنية)", kind: "hadith" };
     emit({ type: "stage", stage: "search", state: "active", source: hadithStage });
-    const results = await Promise.allSettled(rewritten.slice(0, 2).map((q) => searchDorar(q)));
-    let reached = false;
-    for (const r of results) {
-      if (r.status !== "fulfilled") continue;
-      reached = true;
-      for (const h of r.value) {
-        if (hadith.length >= DORAR_COUNT) break;
-        if (!hadith.some((x) => x.text === h.text)) hadith.push({ ...h, via: ["keyword"] });
-      }
-    }
-    if (!reached) emit({ type: "stage", stage: "search", state: "done", source: hadithStage, count: 0, note: "تعذر الوصول لمصدر الحديث" });
+    if (opts.hadithFailed && !hadith.length)
+      emit({ type: "stage", stage: "search", state: "done", source: hadithStage, count: 0, note: "تعذر الوصول لمصدر الحديث" });
     else emit({ type: "stage", stage: "search", state: "done", source: hadithStage, count: hadith.length });
   }
 

@@ -8,19 +8,20 @@ Live: https://bayyinah-henna.vercel.app
 
 ## How it works
 
-1. **Query rewriting.** An OpenAI model turns the question into 2–3 Arabic search queries, without adding assumptions the user did not state.
-2. **Hybrid retrieval**, per source:
+1. **Query rewriting** (`POST /api/queries`). An OpenAI model turns the question into 2–3 Arabic search queries, without adding assumptions the user did not state.
+2. **Hadith from the browser.** The user's browser searches Dorar with those queries (JSONP) and passes the results on as returned.
+3. **Hybrid retrieval** over the Quran, Al-Muyassar and the books, per source:
    - keyword search: BM25 over normalized, lightly stemmed Arabic (built in memory at runtime; stored text is never changed);
    - meaning search: OpenAI embeddings (`text-embedding-3-small`, 256 dimensions), precomputed by the ingest script and stored as int8;
-   - the lists are merged with reciprocal rank fusion into about 10 passages.
-3. **Grounded draft.** The Responses API with a strict JSON Schema returns `status` (answer or abstain), `claims` (one Arabic sentence each, with `passage_ids` and the exact `supporting_quote`), `abstain_reason` and `missing`. The model may use only the retrieved passages, never writes Quran text itself, gives no fatwa, claims no consensus, and attributes words to no one unless the passage does.
-4. **Verification.**
-   - Code: every cited id must be among the retrieved passages, and the supporting quote must appear in the cited passage after normalizing diacritics and spacing. Quoting verse wording inside a claim is rejected.
+   - the lists are merged with reciprocal rank fusion into about 10 passages; a selected tafsir passage brings the verse it explains.
+4. **Grounded draft.** The Responses API with a strict JSON Schema returns `status` (answer or abstain), `claims` (one Arabic sentence each, with `passage_ids` and the exact `supporting_quote`), `abstain_reason` and `missing`. The model may use only the retrieved passages, never writes Quran text itself, gives no fatwa, claims no consensus, and attributes words to no one unless the passage does.
+5. **Verification.**
+   - Code: every cited id must be among the retrieved passages, and the supporting quote must appear in the cited passage after normalizing diacritics and spacing. Quoting verse wording inside a claim is rejected, a quote from a non-Quran passage may not be Quran wording, and a quote from a book must come from the author's answer, not from the question or the opponent's claim being answered.
    - A second model call judges each claim against the full text of its cited passages only: supported or not.
    - Any failure: one redraft with the feedback. If it still fails, Bayyinah abstains and shows why. An unsupported claim is never displayed.
-5. **Streaming.** `POST /api/ask` streams newline-delimited JSON: the real stages (rewriting, searching each source with the number of passages found, drafting, verifying), then the result.
+6. **Streaming.** `POST /api/ask` streams newline-delimited JSON: the real stages (البحث في القرآن والتفسير، البحث في الحديث (الدرر السنية)، البحث في كتب الشبهات والعقيدة, each with its real count, then drafting and verifying), then the result.
 
-The UI shows each claim with its evidence (آية، حديث with its grade as given in the data, or نص). Tapping a citation opens the stored passage with the supporting quote highlighted. "تم التحقق من الإسناد" appears only when every claim passed both checks. "انسخ للمحادثة" copies a clean text for chat apps, with Quran text exactly as stored.
+The UI shows each claim with its evidence (آية، تفسير، حديث with the muhaddith's ruling as returned by Dorar, or نص). Tapping a citation opens the stored passage with the supporting quote highlighted. "تم التحقق من الإسناد" appears only when every claim passed both checks. "انسخ للمحادثة" copies a clean text for chat apps, with Quran text exactly as stored.
 
 ## Trust rules
 
@@ -36,7 +37,7 @@ Sources come only from the approved source plan (the challenge's official scient
 | --- | --- | --- | --- |
 | القرآن الكريم (Hafs, matching the King Fahd Complex print) | «الموسوعة القرآنية quranpedia.net», `mushafs-1.json.gz`, version 2026-10-06, https://quranpedia.net/dumps | The only source of verse text, shown exactly as stored (6236 verses) | Yes, with attribution |
 | التفسير الميسر (King Fahd Complex) | «الموسوعة القرآنية quranpedia.net», `tafsir-book-2012.json.gz`, version 2026-08-10 | One passage per verse, linked to that verse | Yes, with attribution |
-| الدرر السنية: الموسوعة الحديثية | Official public API, https://dorar.net/article/389 | Live hadith search with the muhaddith ruling and source as returned (8 s timeout, cached) | No data stored |
+| الدرر السنية: الموسوعة الحديثية | Official public API (JSONP), https://dorar.net/article/389 | Live hadith search from the user's browser, with the muhaddith ruling and source exactly as returned (8 s timeout, cached) | No data stored |
 | بينات: أسئلة وأجوبة عن الإسلام (Osoul Center) | Official challenge package, PDF text layer | One passage per question (236 of 263 questions detected); quotes must come from the author's answer, not the question | No: encrypted bundle only |
 | أصول الإيمان في ضوء الكتاب والسنة | Official challenge package, PDF text layer | One passage per page, with chapter and page | No: encrypted bundle only |
 
@@ -44,7 +45,7 @@ Not included yet because they need OCR, which has not been run: تفسير ال�
 
 **Private books on the live site.** Copyrighted book texts are never committed. The ingest script encrypts their passages (AES-256-GCM) into `data/private.enc`; the key is `BAYYINAH_INDEX_KEY`, kept only in `.env.local` and in the Vercel environment variables. Without the key the site still works on the Quran, tafsir and hadith.
 
-**Dorar from the server.** Dorar's Cloudflare protection currently rejects server-side requests from Node.js. When that happens the UI shows «تعذر الوصول لمصدر الحديث» and the answer continues from the other sources. The planned fix is to query Dorar from the browser through its documented JSONP interface.
+**Hadith come from the user's browser.** Dorar's Cloudflare protection rejects server-side requests, so the hadith search runs in the user's browser through Dorar's documented JSONP interface (`dorar_api.json?skey=…&callback=…`, see https://dorar.net/article/389). The browser first gets the search queries from `/api/queries`, searches Dorar (8 s timeout, cached per page session), and sends the results to `/api/ask`. Each hadith is shown exactly as Dorar returned it: text, narrator, muhaddith, source, page or number, and the muhaddith's ruling; only HTML tags are removed. The server only validates and size-limits these fields. If Dorar cannot be reached, the UI shows «تعذر الوصول لمصدر الحديث» and the answer continues from the other sources.
 
 ## Setup
 

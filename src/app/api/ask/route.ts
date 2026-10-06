@@ -7,32 +7,14 @@ import { OpenAIError } from "@/lib/openai";
 import { MAX_QUESTION_LENGTH } from "@/lib/limits";
 import { mockAsk, mockEnabled } from "@/lib/mock";
 import { loadManifest } from "@/lib/corpus";
+import { clientIp, rateLimited } from "@/lib/ratelimit";
+import type { AskOptions } from "@/lib/pipeline";
+import type { DorarItem } from "@/lib/dorar-parse";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
 
 const MIN_QUESTION_LENGTH = 4;
-
-// Simple per-instance sliding-window rate limit per IP.
-const WINDOWS = [
-  { ms: 60_000, max: 8 },
-  { ms: 3_600_000, max: 40 },
-];
-const hits = new Map<string, number[]>();
-
-function rateLimited(ip: string): boolean {
-  const now = Date.now();
-  const list = (hits.get(ip) ?? []).filter((t) => now - t < WINDOWS[WINDOWS.length - 1].ms);
-  const blocked = WINDOWS.some((w) => list.filter((t) => now - t < w.ms).length >= w.max);
-  if (!blocked) list.push(now);
-  hits.set(ip, list);
-  if (hits.size > 5000) hits.clear();
-  return blocked;
-}
-
-function clientIp(req: Request): string {
-  return req.headers.get("x-forwarded-for")?.split(",")[0].trim() || req.headers.get("x-real-ip") || "local";
-}
 
 function errorResponse(status: number, message: string) {
   return Response.json({ type: "error", message }, { status });
@@ -40,9 +22,22 @@ function errorResponse(status: number, message: string) {
 
 export async function POST(req: Request) {
   let question = "";
+  const opts: AskOptions = {};
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
   try {
-    const body = (await req.json()) as { question?: unknown };
+    const body = (await req.json()) as { question?: unknown; queries?: unknown; hadith?: unknown; hadithFailed?: unknown };
     question = typeof body.question === "string" ? body.question.trim() : "";
+    if (Array.isArray(body.queries)) opts.queries = body.queries.map((q) => str(q, 200).trim()).filter(Boolean).slice(0, 3);
+    if (Array.isArray(body.hadith))
+      opts.hadith = body.hadith.slice(0, 3).map((h: Record<string, unknown>): DorarItem => ({
+        text: str(h?.text, 4000),
+        narrator: str(h?.narrator, 200),
+        muhaddith: str(h?.muhaddith, 200),
+        book: str(h?.book, 200),
+        locator: str(h?.locator, 100),
+        grade: str(h?.grade, 300),
+      })).filter((h) => h.text);
+    opts.hadithFailed = body.hadithFailed === true;
   } catch {
     return errorResponse(400, "تعذّرت قراءة الطلب.");
   }
@@ -58,7 +53,7 @@ export async function POST(req: Request) {
     async start(controller) {
       const send = (e: PipelineEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
       try {
-        const result = mockEnabled() ? await mockAsk(question, send) : await ask(question, send);
+        const result = mockEnabled() ? await mockAsk(question, send) : await ask(question, send, opts);
         send({ type: "result", result });
       } catch (e) {
         // Log only the error kind, never the question.

@@ -9,6 +9,7 @@ import { MAX_QUESTION_LENGTH } from "@/lib/limits";
 import { arabicDigits } from "@/lib/arabic";
 import { Book } from "./book";
 import { MushafClip } from "./mushaf-clip";
+import { searchDorarInBrowser } from "./dorar-client";
 import { FloatingBooks } from "./floating-books";
 import { HomeHero } from "./home-hero";
 import { SiteHeader } from "./site-header";
@@ -159,10 +160,25 @@ export function AskApp() {
     setResult(null);
     setError(null);
     try {
-      const res = await fetch("/api/ask", {
+      // 1. Search queries from the server.
+      onStage({ type: "stage", stage: "rewriting", state: "active" });
+      const qres = await fetch("/api/queries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q }),
+      });
+      const qbody = (await qres.json().catch(() => null)) as { queries?: string[]; message?: string } | null;
+      if (!qres.ok || !qbody?.queries) throw new Error(qbody?.message ?? "تعذّر الاتصال بالخدمة. أعد المحاولة.");
+      onStage({ type: "stage", stage: "rewriting", state: "done", queries: qbody.queries });
+
+      // 2. Hadith from Dorar, searched by this browser (JSONP) and passed on exactly as returned.
+      const dorar = await searchDorarInBrowser(qbody.queries);
+
+      // 3. The rest of the pipeline, streamed.
+      const res = await fetch("/api/ask", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: q, queries: qbody.queries, hadith: dorar.items, hadithFailed: dorar.failed }),
       });
       if (!res.ok || !res.body) {
         const body = (await res.json().catch(() => null)) as { message?: string } | null;
