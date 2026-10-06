@@ -47,7 +47,7 @@ Sources come only from the approved source plan (the challenge's official scient
 
 Not included:
 - تيسير اللطيف المنان (السعدي): OCR was run, but its verses, set in ornate Mushaf type and woven into the prose, come out corrupted and cannot be separated mechanically with confidence, so the book is excluded to avoid displaying distorted Quran text.
-- براهين وجود الله: scanned pages; OCR in progress, to be added after review.
+- براهين وجود الله: scanned pages. OCR is done, but the book is held back for review: its prose is heavily voweled, so verse lines cannot be told apart mechanically (the verse safeguard would cut about 2% of correct sentences; without it, quoted verses would appear garbled).
 
 **Private books on the live site.** Copyrighted book texts are never committed. The ingest script encrypts their passages (AES-256-GCM) into `data/private.enc`; the key is `BAYYINAH_INDEX_KEY`, kept only in `.env.local` and in the Vercel environment variables. Without the key the site still works on the Quran, tafsir and hadith.
 
