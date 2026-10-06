@@ -104,13 +104,19 @@ Latest run (2026-10-06, local, `gpt-5.4-mini`, all live sources except hadith, s
 
 | Measure | Result |
 | --- | --- |
-| Questions passed (decision, retrieval and verification all correct) | 8 / 10 |
-| Correct decision to answer or abstain | 10 / 10 (100%) |
+| Questions passed (decision, retrieval and verification all correct) | 6 / 10 |
+| Correct decision to answer or abstain | 8 / 10 (80%) |
 | Displayed answers with every claim verified by code and by the second model | 100% |
-| Retrieval hit rate (expected references found) | 71% |
-| Median time per question | 12.2 s |
+| Retrieval hit rate (expected references found) | 75% |
+| Median time per question | 30.4 s |
 
-The three abstention cases (a question with no evidence in the library, a personal fatwa, a judgment on a group) all abstained. The two failures answered with verified claims but did not retrieve the specific expected passage. Model output varies between runs; a claim that fails verification is never shown.
+What failed, and why:
+
+- q10 asks for a judgment on a group and should abstain. It was answered instead: a verified answer from Bayyinat question 13 that declines a blanket judgment and relays the book's distinction between those the message reached and those it did not. The test counts this as a failure.
+- q06 abstained because its draft failed verification twice.
+- q03 and q05 answered with verified claims but did not retrieve the specific expected passage.
+
+Model output varies between runs. The previous run, on the earlier question set (a personal-fatwa question in place of q09), passed 8 / 10 with 10 / 10 correct decisions and a median of 12.2 s. In every run, a claim that fails verification is never shown.
 
 ## Deployment
 

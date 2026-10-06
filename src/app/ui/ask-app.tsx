@@ -37,7 +37,9 @@ const LABEL_MIN_MS = 1100;
 const EXAMPLES = [
   "هل يُجبَر أحد على اعتناق الإسلام بالقوة؟",
   "لماذا خلق الله البشر؟ ما الغاية من وجودنا؟",
-  "زوجي لا يصلي منذ سنة، هل يجب عليّ أن أطلب الطلاق؟",
+  "ما الأدلة على وجود الخالق التي يمكن أن أعرضها على غير المسلم؟",
+  // Shows an abstention: our library has no evidence for it.
+  "ماذا قال ابن تيمية عن الفلسفة اليونانية؟",
 ];
 
 /** "وجد ٤ آيات" with correct Arabic number agreement, per kind of source. */

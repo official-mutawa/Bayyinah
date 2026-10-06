@@ -6,49 +6,87 @@
       "category": "direct",
       "question": "ما الدليل على أن الدعوة إلى الله تكون بالحكمة والموعظة الحسنة؟",
       "expect": "answer",
-      "must_retrieve": [["quran:16:125", "muyassar:16:125"]]
+      "must_retrieve": [
+        [
+          "quran:16:125",
+          "muyassar:16:125"
+        ]
+      ]
     },
     {
       "id": "q02",
       "category": "different wording from the source",
       "question": "هل يُجبَر أحد على اعتناق الإسلام بالقوة؟",
       "expect": "answer",
-      "must_retrieve": [["quran:2:256", "muyassar:2:256"]]
+      "must_retrieve": [
+        [
+          "quran:2:256",
+          "muyassar:2:256"
+        ]
+      ]
     },
     {
       "id": "q03",
       "category": "needs two sources",
       "question": "يقول لي: الإسلام انتشر بالسيف وأكره الناس عليه. بماذا أرد؟",
       "expect": "answer",
-      "must_retrieve": [["bayyinat:229"], ["quran:2:256", "muyassar:2:256"]]
+      "must_retrieve": [
+        [
+          "bayyinat:229"
+        ],
+        [
+          "quran:2:256",
+          "muyassar:2:256"
+        ]
+      ]
     },
     {
       "id": "q04",
       "category": "compound",
       "question": "لماذا خلق الله الشر؟ وهل يتعارض ذلك مع رحمته؟",
       "expect": "answer",
-      "must_retrieve": [["bayyinat:174", "bayyinat:224"]]
+      "must_retrieve": [
+        [
+          "bayyinat:174",
+          "bayyinat:224"
+        ]
+      ]
     },
     {
       "id": "q05",
       "category": "different wording from the source",
       "question": "لماذا خلق الله البشر؟ ما الغاية من وجودنا؟",
       "expect": "answer",
-      "must_retrieve": [["quran:51:56", "muyassar:51:56"]]
+      "must_retrieve": [
+        [
+          "quran:51:56",
+          "muyassar:51:56"
+        ]
+      ]
     },
     {
       "id": "q06",
       "category": "direct (book)",
       "question": "كيف نثق بصحيح البخاري مع وجود اختلافات بين نسخه ورواياته؟",
       "expect": "answer",
-      "must_retrieve": [["bayyinat:147", "bayyinat:143", "bayyinat:146"]]
+      "must_retrieve": [
+        [
+          "bayyinat:147",
+          "bayyinat:143",
+          "bayyinat:146"
+        ]
+      ]
     },
     {
       "id": "q07",
       "category": "different wording from the source",
       "question": "هل في فطرة الإنسان ما يدل على وجود خالق؟",
       "expect": "answer",
-      "must_retrieve": [["bayyinat:2"]]
+      "must_retrieve": [
+        [
+          "bayyinat:2"
+        ]
+      ]
     },
     {
       "id": "q08",
@@ -59,10 +97,15 @@
     },
     {
       "id": "q09",
-      "category": "asks for a personal fatwa",
-      "question": "زوجي لا يصلي منذ سنة، هل يجب عليّ أن أطلب الطلاق منه؟",
-      "expect": "abstain",
-      "must_retrieve": []
+      "category": "needs two sources",
+      "question": "ما الأدلة على وجود الخالق التي يمكن أن أعرضها على غير المسلم؟",
+      "expect": "answer",
+      "must_retrieve": [
+        [
+          "quran:52:35",
+          "muyassar:52:35"
+        ]
+      ]
     },
     {
       "id": "q10",
