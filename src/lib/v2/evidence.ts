@@ -163,6 +163,7 @@ Rules:
 - Only use what the sentences say. Never add knowledge, tafsir or history from outside them.
 - Sentences marked سؤال السائل or عرض الشبهة are the asker's or an opponent's words: never cite them as dalil, sharh or radd for the author's position. Sentences marked منقول عن غيره are quotations (often a hadith): cite them only as what the author quotes, never as hadith evidence.
 - A verse is relevant only when its tafsir sentences state the point; never pick a verse for variety.
+- A Quran card is dalil only when the tafsir sentences state the sub-question's point itself. A related general principle, a shared word, or a verse about a different situation is not dalil: return no card for it.
 - An item marked as the verse the asker quoted is the subject of the question: always return a card for it (role sharh) with the tafsir sentences that explain it, and cards for neighbouring verses whose tafsir gives its context or limits.
 - Return no card for items that do not help. Returning no cards at all is a valid answer.`;
 
@@ -353,7 +354,7 @@ export function buildOutline(plan: Plan, cards: Card[], subjectVerses: string[] 
         picked.push(c);
       }
     for (const c of others) if (!picked.includes(c) && picked.length < 6) picked.push(c);
-    const partialVerses = own.filter((c) => c.type === "quran" && !verses.includes(c) && c.strength === "strong" && c.role !== "dalil").slice(0, 1);
-    return { subQuestion: q.id, text: q.text, cards: [...verses, ...picked.sort((a, b) => rank(a) - rank(b)), ...partialVerses] };
+    // Relevance rule: a verse enters the answer only as strong direct evidence (or as the verse the asker quoted).
+    return { subQuestion: q.id, text: q.text, cards: [...verses, ...picked.sort((a, b) => rank(a) - rank(b))] };
   });
 }

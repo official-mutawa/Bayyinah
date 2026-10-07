@@ -36,7 +36,7 @@ function Segments({ segments, verses }: { segments: Segment[]; verses: AskResult
           const first = i === 0 || segments[i - 1].verse?.from !== seg.verse.from || segments[i - 1].verse?.surah !== seg.verse.surah;
           return first ? (
             <span key={i} className="mx-1 inline rounded-md bg-paper px-1.5 py-0.5" title={verseLabel(seg.verse.surah, seg.verse.from, seg.verse.to, verses)}>
-              ﴿<VerseText surah={seg.verse.surah} from={seg.verse.from} to={seg.verse.to} verses={verses} size="sm" />﴾
+              <VerseText surah={seg.verse.surah} from={seg.verse.from} to={seg.verse.to} verses={verses} size="sm" />
               <span className="ms-1 text-sm text-ink-2">[{verseLabel(seg.verse.surah, seg.verse.from, seg.verse.to, verses)}]</span>
             </span>
           ) : null;

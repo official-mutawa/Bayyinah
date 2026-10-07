@@ -79,7 +79,7 @@ for (const b of bay.records) {
     sourceId: "bayyinat",
     kind: "book",
     title: b.title,
-    refLabel: `بينات، المسألة ${arabicDigits(b.number)}: ${b.title}${b.page ? `، ص ${arabicDigits(b.page)}` : ""}`,
+    refLabel: `بينات، المسألة ${arabicDigits(b.number)}: ${b.title.replace(/[.،؛\s]+$/, "")}${b.page ? `، ص ${arabicDigits(b.page)}` : ""}`,
     number: b.number,
     page: b.page,
     text: b.text,

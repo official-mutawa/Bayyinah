@@ -43,11 +43,11 @@ function CiteButton({ cite, result, onOpen }: { cite: ResolvedCite; result: AskR
     <button
       type="button"
       onClick={(e) => onOpen(cite, e.currentTarget)}
-      className="press inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[1.375rem] border border-line bg-paper px-3.5 py-2 text-start text-[0.9375rem] leading-snug text-primary hover:border-gold"
+      className="press inline-block min-h-11 max-w-full rounded-[1.375rem] border border-line bg-paper px-3.5 py-2 text-start text-[0.9375rem] leading-snug text-primary [overflow-wrap:anywhere] hover:border-gold"
       aria-label={`اعرض المصدر والسياق: ${label}`}
     >
       <span className="font-semibold">اعرض المصدر والسياق</span>
-      <span aria-hidden="true" className="text-gold">
+      <span aria-hidden="true" className="mx-1.5 text-gold">
         ·
       </span>
       <span className="text-ink-2">{label}</span>

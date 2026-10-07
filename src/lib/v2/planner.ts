@@ -57,7 +57,7 @@ const INSTRUCTIONS = `You analyse a question that a Muslim daʿi was asked by a 
 - out_of_scope and out_of_scope_kind (otherwise "none"):
   * personal_fatwa: a ruling or fatwa for a specific personal situation (marriage, divorce, money, worship of a named person).
   * disputed_fiqh: a fine-grained fiqh ruling on which scholars differ (e.g. the ruling on music, covering the face).
-  * major_disputed_issue: a major issue that scholars dispute.
+  * major_disputed_issue: a major issue that scholars dispute, e.g. whether ignorance excuses in matters of creed (العذر بالجهل), declaring Muslims disbelievers (التكفير), or rebellion against rulers.
   * judgment_on_person_or_group: whether a specific person or group is in Paradise or Hell, is a disbeliever, etc.
   * current_events: news or events happening now.
   General questions about Islam's teachings, worship in general, ethics, history (sīrah), creed and common objections are in scope.

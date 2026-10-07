@@ -285,7 +285,7 @@ const WHOLE_SCHEMA = {
         required: ["claims", "type", "severity", "note"],
         properties: {
           claims: { type: "array", items: { type: "string" } },
-          type: { type: "string", enum: ["emergent_claim", "fiqh_ruling", "fatwa", "consensus", "weak_hadith", "unfair_disagreement", "judgment_on_fate", "other"] },
+          type: { type: "string", enum: ["emergent_claim", "forced_verse", "fiqh_ruling", "fatwa", "consensus", "weak_hadith", "unfair_disagreement", "judgment_on_fate", "other"] },
           severity: { type: "string", enum: ["block", "note"] },
           note: { type: "string" },
         },
@@ -302,6 +302,7 @@ const WHOLE_INSTRUCTIONS = `You review a complete draft answer (already checked 
 - weak_hadith: any hadith shown without an accepted ruling;
 - unfair_disagreement: sources that differ but are presented unfairly or reconciled without a source;
 - judgment_on_fate: any judgment on a person's or group's fate.
+- forced_verse: a verse used for a point that its cited tafsir does not directly address for THIS question (a general principle or another situation applied here); severity block, naming the claim that uses it.
 claims: the SMALLEST set of claim ids whose removal fixes the issue (e.g. ["q2:C3"]); for emergent_claim name only the claim that adds the unsupported link, not every claim involved; never empty for a block. severity: block only when the answer must not be shown with those claims; otherwise note.
 uncovered: checklist points the answer does not address (short Arabic).`;
 

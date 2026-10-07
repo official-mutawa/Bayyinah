@@ -254,10 +254,12 @@ export function summarize(questions: GoldenQuestion[], runs: QuestionRun[]) {
     questions: scored.length,
     errors: scored.filter((r) => r.error).length,
     decisionAccuracy: pct(scored.filter((r) => s(r).statusOk).length, scored.length),
-    correctAbstention: pct(expectAbstain.filter((r) => r.result?.status === "abstain").length, expectAbstain.length),
+    correctAbstention: pct(expectAbstain.filter((r) => ["abstain", "out_of_scope"].includes(String(r.result?.status))).length, expectAbstain.length),
+    outOfScopeRecognized: pct(scored.filter((r) => qById.get(r.id)?.expect === "out_of_scope" && String(r.result?.status) === "out_of_scope").length, scored.filter((r) => qById.get(r.id)?.expect === "out_of_scope").length),
     falseAbstentions: expectAnswer.filter((r) => s(r).falseAbstention).map((r) => r.id),
     answered: answers.length,
     verifiedAnswers: pct(answers.filter((r) => r.result?.verified).length, answers.length),
+    answersPassingAllChecks: pct(answers.filter((r) => (r.score as { checksPassed?: boolean }).checksPassed ?? r.result?.verified).length, answers.length),
     sourceStatusCoverage: pct(scored.filter((r) => s(r).sourceStatusRecorded).length, scored.length),
     retrievalRecallPerSource: perSource,
     retrievalRecallMacro: recalls.length ? Number((recalls.reduce((a, b) => a + b, 0) / recalls.length).toFixed(1)) : null,
@@ -274,7 +276,10 @@ export function summarize(questions: GoldenQuestion[], runs: QuestionRun[]) {
     citedPassagesWithEmptyMarkers: scored.reduce((n, r) => n + s(r).citedPassagesWithEmptyMarkers, 0),
     latencyMedianS: median(lat) !== null ? Number((median(lat)! / 1000).toFixed(1)) : null,
     latencyP95S: p95(lat) !== null ? Number((p95(lat)! / 1000).toFixed(1)) : null,
-    timeToVerifiedSummaryMedianS: median(answers.map((r) => r.ms)) !== null ? Number((median(answers.map((r) => r.ms))! / 1000).toFixed(1)) : null,
+    timeToVerifiedSummaryMedianS: (() => {
+      const t = answers.map((r) => ((r.result as unknown as { timings?: { summaryReady?: number } })?.timings?.summaryReady ?? r.ms));
+      return median(t) !== null ? Number((median(t)! / 1000).toFixed(1)) : null;
+    })(),
     usd: Number(scored.reduce((n, r) => n + r.usage.usd, 0).toFixed(4)),
     usdPerQuestion: scored.length ? Number((scored.reduce((n, r) => n + r.usage.usd, 0) / scored.length).toFixed(4)) : null,
     tokens: {
