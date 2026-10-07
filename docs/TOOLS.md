@@ -17,6 +17,7 @@ Called through the OpenAI REST API with `fetch` (no SDK). Model names come from 
 | --- | --- | --- | --- |
 | OpenAI `gpt-5.4-mini` (default `OPENAI_MODEL`) | https://platform.openai.com/docs/models | OpenAI Services Agreement | Rewriting the question into 2-3 Arabic search queries; drafting the answer from retrieved passages only (strict JSON Schema); the second, independent check of every claim against its cited passages |
 | OpenAI `text-embedding-3-small`, 256 dimensions (default `OPENAI_EMBED_MODEL`) | https://platform.openai.com/docs/guides/embeddings | OpenAI Services Agreement | Meaning search: passage embeddings precomputed by the ingest script, query embeddings at request time |
+| OpenAI `gpt-5.4` (v2 only, local development) | https://developers.openai.com/api/docs/models | OpenAI Services Agreement | Temporary stand-in for the v2 support reviewer and whole-answer review until a key for another model family is configured; answers reviewed by it are never shown as verified |
 
 ## OCR (text extraction, not generation)
 
