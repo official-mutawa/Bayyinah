@@ -1,0 +1,14 @@
+{
+  "note": "Provisional hadith ruling whitelist for v2. The decision belongs to the project author and the Sharia reviewer. Until they approve more, only the exact rulings in 'approved' count as evidence; everything else (including unknown or unparsed rulings) is never evidence. Rulings are compared exactly as Dorar returns them, after trimming surrounding whitespace only.",
+  "approved": ["صحيح", "حسن"],
+  "pending_review": [
+    { "ruling": "[صحيح]", "where": "Dorar's format for entries from صحيح البخاري and صحيح مسلم (66 of 68 such entries in the phase 0 sample). Excluded until approved, which means Bukhari and Muslim entries are NOT used yet." },
+    { "ruling": "[أورده في صحيحه]", "where": "Bukhari entries with a trailing chain note" },
+    { "ruling": "أخرجه في صحيحه", "where": "Ibn Hibban and others: inclusion in a collection that requires authenticity" },
+    { "ruling": "صحيح لغيره", "where": "strengthened by other routes; needs explicit treatment" },
+    { "ruling": "حسن لغيره", "where": "strengthened by other routes; needs explicit treatment" },
+    { "ruling": "حسن صحيح", "where": "e.g. al-Albani, al-Tirmidhi" },
+    { "ruling": "إسناده صحيح", "where": "grades the chain, not the hadith as a whole" },
+    { "ruling": "متواتر", "where": "mass-transmitted" }
+  ]
+}

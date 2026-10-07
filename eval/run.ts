@@ -14,7 +14,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { installUsageTracking, ledgerTotal, loadLocalEnv, usage } from "./lib/usage.ts";
-import { scoreQuestion, summarize, type GoldenQuestion, type QuestionRun } from "./lib/score.ts";
+import { scoreQuestion, scoreQuestionV2, summarize, type GoldenQuestion, type QuestionRun } from "./lib/score.ts";
 import { renderReport } from "./lib/report.ts";
 
 const args = new Map<string, string>();
@@ -61,9 +61,15 @@ for (const q of questions) {
   process.stdout.write(`${q.id} … `);
   let result = null;
   let error: string | null = null;
+  let trace: { candidates?: Record<string, { id: string }[]> } | null = null;
   try {
-    if (pipeline !== "v1") throw new Error(`pipeline ${pipeline} is not available yet`);
-    result = await ask(q.question, (e) => events.push({ t: Date.now() - started, e }), opts);
+    if (pipeline === "v2") {
+      const { askV2 } = await import("../src/lib/v2/pipeline-v2.ts");
+      const r = await askV2(q.question, (e) => events.push({ t: Date.now() - started, e: e.type === "part" ? { type: "part", id: e.part.id } : e }), { hadith: opts.hadith, hadithFailed: opts.hadithFailed });
+      result = r as unknown as typeof result;
+      const tf = r.traceId ? path.join("local", "traces", `${r.traceId}.json`) : "";
+      trace = tf && existsSync(tf) ? JSON.parse(readFileSync(tf, "utf8")) : null;
+    } else result = await ask(q.question, (e) => events.push({ t: Date.now() - started, e }), opts);
   } catch (e) {
     error = `${(e as Error).name}: ${(e as Error).message}`.slice(0, 300);
   }
@@ -78,7 +84,7 @@ for (const q of questions) {
     events,
     usage: usage.since(mark),
   };
-  run.score = scoreQuestion(q, run);
+  run.score = pipeline === "v2" ? scoreQuestionV2(q, run, trace) : scoreQuestion(q, run);
   runs.push(run);
   writeFileSync(path.join(outDir, `${q.id}.json`), JSON.stringify(run, null, 1));
   console.log(`${result?.status ?? "error"} ${(run.ms / 1000).toFixed(1)}s $${run.usage.usd.toFixed(4)}${error ? ` (${error})` : ""}`);

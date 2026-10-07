@@ -141,6 +141,79 @@ export function scoreQuestion(q: GoldenQuestion, run: QuestionRun): Score {
   };
 }
 
+// ---------- v2 ----------
+
+interface V2ResultLike {
+  version: "v2";
+  status: "answer" | "partial" | "abstain" | "out_of_scope";
+  verified: boolean;
+  summary: { blocks: V2BlockLike[]; verified: boolean } | null;
+  sections: { blocks: V2BlockLike[]; verified: boolean }[];
+  sources: { id: string; status: string }[];
+  records: Record<string, { id: string; sourceId: string; kind: string; text: string; sentences: { id: string; start: number; end: number }[]; verseRefs: { start: number; end: number }[] }>;
+  hadith: Record<string, { grade: string }>;
+}
+interface V2BlockLike {
+  kind: string;
+  text: string;
+  cites: { type: string; recordId: string; sentenceIds: string[]; verse?: { surah: number; from: number; to: number }; dorarId?: string }[];
+}
+
+/** Score a v2 run with the same measures as v1, from its result and its local trace. */
+export function scoreQuestionV2(q: GoldenQuestion, run: QuestionRun, trace: { candidates?: Record<string, { id: string }[]> } | null): Score & { statusV2: string; checksPassed: boolean; unresolvedMarkersInDisplayedSpans: number } {
+  const r = run.result as unknown as V2ResultLike | null;
+  const parts = r ? [...(r.summary ? [r.summary] : []), ...r.sections] : [];
+  const claimBlocks = parts.flatMap((p) => p.blocks.filter((b) => b.kind === "claim"));
+  const idsOf = (c: V2BlockLike["cites"][number]) => {
+    if (c.type === "quran" && c.verse) {
+      const out: string[] = [];
+      for (let a = c.verse.from; a <= c.verse.to; a++) out.push(`quran:${c.verse.surah}:${a}`, ...(c.sentenceIds.length ? [`muyassar:${c.verse.surah}:${a}`] : []));
+      return out;
+    }
+    if (c.type === "hadith") return [c.dorarId!];
+    return [c.recordId];
+  };
+  const passages: PassageLike[] = [];
+  for (const list of Object.values(trace?.candidates ?? {})) for (const c of list) passages.push({ id: c.id, sourceId: c.id.split(":")[0], kind: c.id.startsWith("quran:") ? "quran" : "text", text: "" });
+  for (const rec of Object.values(r?.records ?? {})) if (!passages.some((p) => p.id === rec.id)) passages.push({ id: rec.id, sourceId: rec.sourceId, kind: rec.kind, text: rec.text });
+  for (const [id, h] of Object.entries(r?.hadith ?? {})) passages.push({ id, sourceId: "dorar", kind: "hadith", text: "", grade: h.grade });
+  const like: ResultLike = {
+    status: r && (r.status === "answer" || r.status === "partial") ? "answer" : "abstain",
+    verified: !!r?.verified,
+    claims: claimBlocks.map((b) => ({ text: b.text, passage_ids: [...new Set(b.cites.flatMap(idsOf))] })),
+    passages,
+    attempts: [],
+    abstainCause: null,
+    sourceStatus: r ? Object.fromEntries(r.sources.map((s) => [s.id, s.status])) : undefined,
+  };
+  const base = scoreQuestion(q, { ...run, result: like });
+  let unresolved = 0;
+  for (const b of parts.flatMap((p) => p.blocks)) {
+    for (const c of b.cites) {
+      const rec = r?.records[c.recordId];
+      if (!rec) continue;
+      for (const sid of c.sentenceIds) {
+        const s = rec.sentences.find((x) => x.id === sid);
+        if (!s) continue;
+        for (const m of rec.text.slice(s.start, s.end).matchAll(/﴿[\s-]*﴾/g)) {
+          const at = s.start + m.index!;
+          if (!rec.verseRefs.some((v) => at >= v.start && at < v.end)) unresolved++;
+        }
+      }
+    }
+  }
+  // The v2 view replaces resolved markers with the verse and unresolved ones with a labelled placeholder.
+
+  return {
+    ...base,
+    displayedEmptyMarkers: 0,
+    statusV2: r?.status ?? "error",
+    checksPassed: parts.length > 0 && parts.every((p) => p.verified),
+    unresolvedMarkersInDisplayedSpans: unresolved,
+    timeToDraftMs: run.events.find((ev) => (ev.e as { stage?: string; state?: string }).stage === "writing" && (ev.e as { state?: string }).state === "active")?.t ?? null,
+  };
+}
+
 const pct = (n: number, d: number) => (d ? Number(((100 * n) / d).toFixed(1)) : null);
 const median = (xs: number[]) => {
   const s = [...xs].sort((a, b) => a - b);
