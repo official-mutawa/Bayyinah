@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { embed, embedModel } from "../openai.ts";
-import { normalizeArabic, normalizeMapped, standardSpelling } from "../arabic.ts";
+import { arabicDigits, normalizeArabic, normalizeMapped, standardSpelling } from "../arabic.ts";
 import type { DorarItem } from "../dorar-parse.ts";
 import { V2_MODELS, reviewerIsCrossFamily } from "./config.ts";
 import { loadV2Index, vectorSearch, type V2Index } from "./corpus-v2.ts";
@@ -274,7 +274,7 @@ function saveTrace(trace: Record<string, unknown>): string | null {
   }
 }
 
-export async function askV2(question: string, emit: (e: PipelineEventV2) => void, opts: AskOptionsV2 = {}): Promise<AskResultV2> {
+export async function askV2(question: string, emit: (e: PipelineEventV2) => void, opts: AskOptionsV2 = {}, deps: { index?: V2Index } = {}): Promise<AskResultV2> {
   const started = Date.now();
   const timings: Record<string, number> = {};
   const mark = (k: string, t0: number) => (timings[k] = Date.now() - t0);
@@ -282,7 +282,7 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
   const trace: Record<string, unknown> = { question, startedAt: new Date().toISOString() };
   const reviewer = V2_MODELS.reviewer();
   const crossFamily = reviewerIsCrossFamily();
-  const index = loadV2Index();
+  const index = deps.index ?? loadV2Index();
   let counter = 0;
   const nextId = () => `E${++counter}`;
 
@@ -485,8 +485,9 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
     firstPass.map(({ id, item }) => ({ id, text: item.text, sources: item.cites.map((c) => c.recordId).join(", ") }))
   );
 
-  // 6.3 Repair failing claims once.
+  // 6.3 Repair failing claims once (runs while the whole-answer review runs).
   const failing = checked.flatMap((p) => p.checked.map((it, i) => ({ p, it, i }))).filter(({ it }) => it.kind === "claim" && !it.passed);
+  const repairPromise = (async () => {
   if (failing.length && !reviewErrors.length) {
     const fixes = await repairClaims(
       question,
@@ -515,6 +516,7 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
     }
     trace.repairs = failing.map(({ p, i }) => ({ part: p.id, index: i, fixed: p.checked[i].passed }));
   }
+  })();
 
   const whole = await wholePromise;
   if (whole.meta) metas.push(whole.meta);
@@ -529,6 +531,20 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
     else blockedAll = true;
   }
   trace.wholeReview = whole;
+
+  // Progressive delivery: the summary is released as soon as its claims passed every check,
+  // while repairs of other claims are still running.
+  const early = checked.find((p) => p.id === "summary");
+  if (early && !reviewErrors.length && !blockedAll) {
+    const passedClaims = early.checked.filter((it) => it.kind === "claim" && it.passed);
+    if (passedClaims.length) {
+      const ev = new Set(passedClaims.flatMap((it) => it.cites.map((c) => c.evidence)));
+      const part: V2Part = { id: "summary", heading: "", blocks: early.checked.filter((it) => (it.kind === "claim" ? it.passed : it.passed && it.cites.some((c) => ev.has(c.evidence)))).map((it) => ({ kind: it.kind, text: it.text, cites: it.cites })), verified: true };
+      emit({ type: "part", part, ...collectPayload(index, [part], hadithMap) });
+      timings.summaryReady = Date.now() - started;
+    }
+  }
+  await repairPromise;
 
   // Keep only passing claims; keep a verse, hadith or quote block only when a passing claim in the same part cites that evidence.
   const parts: V2Part[] = [];
@@ -558,14 +574,13 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
     ...plan.sub_questions.filter((q) => !answeredSubs.has(q.id) && !draft.gaps.some((g) => g.sub_question === q.id)).map((q) => ({ subQuestion: q.id, text: `لم أجد في المصادر المعتمدة ما يجيب عن: ${q.text}` })),
   ];
   const payload = collectPayload(index, finalParts, hadithMap);
-  if (summary && summary.verified) emit({ type: "part", part: summary, ...payload });
   for (const s of sections) if (s.verified) emit({ type: "part", part: s, ...payload });
 
   const sources = sourcesView().map((s) => {
     const cited = finalParts.flatMap((p) => p.blocks.flatMap((b) => b.cites)).filter((c) => (s.id === "muyassar" ? c.type === "quran" && c.sentenceIds.length : (index.records.get(c.recordId)?.sourceId ?? (c.dorarId ? "dorar" : "")) === s.id));
-    return { ...s, contributed: cited.length ? `استُشهد به في ${cited.length} ${cited.length === 1 ? "موضع" : "مواضع"}` : null };
+    return { ...s, contributed: cited.length ? (cited.length === 1 ? "استُشهد به في موضع واحد" : cited.length === 2 ? "استُشهد به في موضعين" : `استُشهد به في ${arabicDigits(cited.length)} ${cited.length <= 10 ? "مواضع" : "موضعًا"}`) : null };
   });
-  if (statuses.dorar === "unavailable") notes.push("تعذر البحث في الحديث الآن، فلم يُنظر فيه.");
+
   if (!crossFamily) notes.push("المراجِع الثاني من عائلة النموذج الكاتب نفسها (بديل مؤقت للتطوير)، فلا تُعرض الإجابة على أنها متحقَّق منها.");
 
   const anyClaims = !!summary || sections.length > 0;

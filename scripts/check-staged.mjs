@@ -28,7 +28,9 @@ const SECRET_PATTERNS = [
   [/sk-(proj-)?[A-Za-z0-9_-]{20,}/, "looks like an OpenAI key"],
   [/sk-ant-[A-Za-z0-9_-]{20,}/, "looks like an Anthropic key"],
   [/AIza[0-9A-Za-z_-]{30,}/, "looks like a Google API key"],
-  [/(OPENAI_API_KEY|BAYYINAH_INDEX_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)\s*=\s*\S{8,}/, "assigns a secret variable"],
+  // Env-file style assignment at line start (code that sets a fake test value is allowed).
+  [/^\s*(export\s+)?(OPENAI_API_KEY|BAYYINAH_INDEX_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)\s*=\s*\S{8,}/m, "assigns a secret variable"],
+  [/(OPENAI_API_KEY|BAYYINAH_INDEX_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY)\s*=\s*["'](sk-|AIza|[0-9a-f]{32})/, "assigns a key-like value to a secret variable"],
   [/\b[0-9a-f]{64}\b/, "64-hex string (could be the index key; SHA-256 hashes also match, check by hand)"],
 ];
 

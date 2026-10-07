@@ -71,6 +71,29 @@ const INSTRUCTIONS = `You analyse a question that a Muslim daʿi was asked by a 
   * books: 3 to 5 reformulations as an Arabic book on creed and common objections would phrase them, including classical synonyms of key terms.
 Do not add religious claims, positions, people, places or facts the user did not state. Do not judge the asker's intent.`;
 
+/** Validate a plan that came back from the browser; returns null when anything is off (then the server plans again). */
+export function sanitizePlan(raw: unknown, question: string): Plan | null {
+  if (!raw || typeof raw !== "object") return null;
+  const p = raw as Record<string, unknown>;
+  const str = (v: unknown, max = 300) => (typeof v === "string" ? v.slice(0, max) : null);
+  const strs = (v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n).map((x) => str(x)).filter((x): x is string => !!x && x.trim().length > 0) : null);
+  const q = p.queries as Record<string, unknown> | undefined;
+  const subs = Array.isArray(p.sub_questions) ? p.sub_questions.slice(0, V2_LIMITS.maxSubQuestions) : null;
+  if (!subs || !subs.length || !q) return null;
+  const out: Plan = {
+    answer_language: (["ar", "en", "other"] as const).find((x) => x === p.answer_language) ?? "ar",
+    intent: str(p.intent) ?? "",
+    category: CATEGORIES.find((x) => x === p.category) ?? "عقيدة",
+    out_of_scope_kind: OOS_KINDS.find((x) => x === p.out_of_scope_kind) ?? "none",
+    ambiguity: str(p.ambiguity) ?? "",
+    sub_questions: subs.map((s, i) => ({ id: `q${i + 1}`, text: str((s as { text?: unknown })?.text) ?? "" })).filter((s) => s.text),
+    coverage_checklist: strs(p.coverage_checklist, 6) ?? [],
+    quoted_verse_wording: (strs(p.quoted_verse_wording, 3) ?? []).filter((w) => question.includes(w.trim())),
+    queries: { quran: strs(q.quran, 5) ?? [], hadith: strs(q.hadith, 4) ?? [], books: strs(q.books, 5) ?? [] },
+  };
+  return out.sub_questions.length ? out : null;
+}
+
 export async function plan(question: string): Promise<{ plan: Plan; meta: CallMeta }> {
   const { data, meta } = await openaiStructured<Plan>({
     name: "question_plan",

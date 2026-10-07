@@ -8,11 +8,11 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { loadCorpus } from "../../src/lib/corpus.ts";
 import { arabicDigits } from "../../src/lib/arabic.ts";
-import { segment } from "../../src/lib/v2/segment.ts";
 import { buildQuranInfo, emptyMarkers, findVerseRefs } from "../../src/lib/v2/verse-refs.ts";
 import type { Speaker, V2Child, V2Corpus, V2Record } from "../../src/lib/v2/types.ts";
+import { findQuotedHadith } from "../../src/lib/v2/hadith-in-books.ts";
+import { recordChildren, recordSentences } from "../../src/lib/v2/records.ts";
 
-const CHILD_MAX = 650;
 const BAYYINAT_V2 = "data/v2/books/bayyinat.records.json";
 if (!existsSync(BAYYINAT_V2)) throw new Error(`Run scripts/v2/extract-bayyinat.ts first (${BAYYINAT_V2} missing)`);
 
@@ -20,57 +20,10 @@ const { passages, sources } = loadCorpus();
 const quranPassages = passages.filter((p) => p.kind === "quran");
 const info = buildQuranInfo(quranPassages.map((p) => ({ surah: p.surah!, ayah: p.ayah!, surahName: p.surahName ?? "", text: p.text })));
 
-/** «…» quotes attributed to the Prophet ﷺ or to a hadith collection. */
-function quotedHadith(text: string): { start: number; end: number; matched: null }[] {
-  const out: { start: number; end: number; matched: null }[] = [];
-  for (const m of text.matchAll(/«([^«»]{12,1500})»/g)) {
-    const before = text.slice(Math.max(0, m.index! - 60), m.index!);
-    const after = text.slice(m.index! + m[0].length, m.index! + m[0].length + 80);
-    const attributed = /(قال|يقول|فقال)\s*(رسول\s*الله|النبي|نبي)\s*ﷺ?|ﷺ\s*(قال|:)|عن النبي|أن النبي|أن رسول الله/.test(before);
-    const sourced = /^[\s؛:،.)(-]*(رواه|أخرجه|متفق عليه|رواهما)/.test(after);
-    if (attributed || sourced) out.push({ start: m.index!, end: m.index! + m[0].length, matched: null });
-  }
-  return out;
-}
+const quotedHadith = findQuotedHadith;
 
-function sentencesFor(id: string, text: string, sections: V2Record["sections"], hadith: V2Record["quotedHadith"]) {
-  return segment(text).map((s) => {
-    const sec = sections.find((x) => s.start >= x.start && s.start < x.end);
-    let speaker: Speaker = sec?.speaker ?? "author";
-    // A sentence that is mostly a quoted hadith is not the author's own words.
-    const inside = hadith.reduce((n, h) => n + Math.max(0, Math.min(s.end, h.end) - Math.max(s.start, h.start)), 0);
-    if (speaker === "author" && inside >= 0.6 * (s.end - s.start)) speaker = "quoted_other";
-    return { id: `${id}:s${s.n}`, n: s.n, start: s.start, end: s.end, speaker };
-  });
-}
-
-function childrenFor(r: V2Record): V2Child[] {
-  const out: V2Child[] = [];
-  let cur: V2Record["sentences"] = [];
-  const flush = () => {
-    if (!cur.length) return;
-    const speakers = new Set(cur.map((s) => s.speaker));
-    out.push({
-      id: `${r.id}:c${out.length + 1}`,
-      recordId: r.id,
-      sourceId: r.sourceId,
-      start: cur[0].start,
-      end: cur.at(-1)!.end,
-      sentenceIds: cur.map((s) => s.id),
-      speaker: speakers.size === 1 ? cur[0].speaker : "mixed",
-    });
-    cur = [];
-  };
-  for (const s of r.sentences) {
-    const sectionOf = (x: { start: number }) => r.sections.findIndex((sec) => x.start >= sec.start && x.start < sec.end);
-    const breakSection = cur.length && sectionOf(cur[0]) !== sectionOf(s);
-    const tooLong = cur.length && s.end - cur[0].start > CHILD_MAX;
-    if (breakSection || tooLong) flush();
-    cur.push(s);
-  }
-  flush();
-  return out;
-}
+const sentencesFor = recordSentences;
+const childrenFor = recordChildren;
 
 const records: V2Record[] = [];
 const label = new Map(sources.map((s) => [s.id, s]));

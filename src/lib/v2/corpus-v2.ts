@@ -59,6 +59,18 @@ export function loadV2Index(): V2Index {
   if (cached) return cached;
   if (!existsSync(V2_CORPUS())) throw new Error("v2 corpus missing: run scripts/v2/build-records.ts");
   const corpus = JSON.parse(readFileSync(V2_CORPUS(), "utf8")) as V2Corpus;
+  let vectors: V2Index["vectors"] = null;
+  if (existsSync(V2_VECTORS_META()) && existsSync(V2_VECTORS_BIN())) {
+    const meta = JSON.parse(readFileSync(V2_VECTORS_META(), "utf8")) as { ids: string[]; scales: number[]; dims: number; model: string };
+    const buf = readFileSync(V2_VECTORS_BIN());
+    vectors = { ...meta, index: new Map(meta.ids.map((id, i) => [id, i])), bin: new Int8Array(buf.buffer, buf.byteOffset, buf.byteLength) };
+  }
+  cached = buildV2Index(corpus, vectors);
+  return cached;
+}
+
+/** Build the in-memory index from a corpus (also used by tests with synthetic records). */
+export function buildV2Index(corpus: V2Corpus, vectors: V2Index["vectors"] = null): V2Index {
   const records = new Map(corpus.records.map((r) => [r.id, r]));
   const tafsirOf = new Map<string, V2Record>();
   for (const r of corpus.records) if (r.sourceId === "muyassar") tafsirOf.set(`quran:${r.surah}:${r.ayah}`, r);
@@ -68,14 +80,7 @@ export function loadV2Index(): V2Index {
     const own = units.filter((u) => u.sourceId === sid);
     bySource.set(sid, { units: own, bm25: new BM25(own.map((u) => unitSearchText(u, records.get(u.recordId)!, tafsirOf.get(u.recordId)))) });
   }
-  let vectors: V2Index["vectors"] = null;
-  if (existsSync(V2_VECTORS_META()) && existsSync(V2_VECTORS_BIN())) {
-    const meta = JSON.parse(readFileSync(V2_VECTORS_META(), "utf8")) as { ids: string[]; scales: number[]; dims: number; model: string };
-    const buf = readFileSync(V2_VECTORS_BIN());
-    vectors = { ...meta, index: new Map(meta.ids.map((id, i) => [id, i])), bin: new Int8Array(buf.buffer, buf.byteOffset, buf.byteLength) };
-  }
-  cached = { corpus, records, tafsirOf, units: new Map(units.map((u) => [u.id, u])), bySource, vectors };
-  return cached;
+  return { corpus, records, tafsirOf, units: new Map(units.map((u) => [u.id, u])), bySource, vectors };
 }
 
 /** Cosine similarity of a unit query vector against the given unit ids (int8 store). */

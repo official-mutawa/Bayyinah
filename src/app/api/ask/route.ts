@@ -10,9 +10,13 @@ import { loadManifest } from "@/lib/corpus";
 import { clientIp, rateLimited } from "@/lib/ratelimit";
 import type { AskOptions } from "@/lib/pipeline";
 import type { DorarItem } from "@/lib/dorar-parse";
+import { pipelineVersion } from "@/lib/v2/config";
+import { sanitizePlan } from "@/lib/v2/planner";
+import { askV2, type PipelineEventV2 } from "@/lib/v2/pipeline-v2";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// v2 reviews every claim and may repair some: allow up to three minutes.
+export const maxDuration = 180;
 
 const MIN_QUESTION_LENGTH = 4;
 
@@ -22,10 +26,12 @@ function errorResponse(status: number, message: string) {
 
 export async function POST(req: Request) {
   let question = "";
+  let rawPlan: unknown = null;
   const opts: AskOptions = {};
   const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
   try {
-    const body = (await req.json()) as { question?: unknown; queries?: unknown; hadith?: unknown; hadithFailed?: unknown };
+    const body = (await req.json()) as { question?: unknown; queries?: unknown; hadith?: unknown; hadithFailed?: unknown; plan?: unknown };
+    rawPlan = body.plan;
     question = typeof body.question === "string" ? body.question.trim() : "";
     if (Array.isArray(body.queries)) opts.queries = body.queries.map((q) => str(q, 200).trim()).filter(Boolean).slice(0, 3);
     if (Array.isArray(body.hadith))
@@ -51,8 +57,15 @@ export async function POST(req: Request) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
-      const send = (e: PipelineEvent) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
+      const send = (e: PipelineEvent | PipelineEventV2) => controller.enqueue(encoder.encode(JSON.stringify(e) + "\n"));
       try {
+        if (!mockEnabled() && pipelineVersion() === "v2") {
+          // The plan came back from the browser: validated, or made again on the server.
+          const plan = sanitizePlan(rawPlan, question) ?? undefined;
+          const result = await askV2(question, send, { plan, hadith: opts.hadith, hadithFailed: opts.hadithFailed || !opts.hadith });
+          send({ type: "result", result });
+          return;
+        }
         const result = mockEnabled() ? await mockAsk(question, send) : await ask(question, send, opts);
         send({ type: "result", result });
       } catch (e) {

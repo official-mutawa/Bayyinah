@@ -52,12 +52,14 @@ function windows(t: string, n: number): Set<string> {
   return out;
 }
 
-let quranWindows: Set<string> | null = null;
+const quranWindowsByIndex = new WeakMap<V2Index, Set<string>>();
 function allQuranWindows(index: V2Index): Set<string> {
-  if (quranWindows) return quranWindows;
-  quranWindows = new Set();
-  for (const r of index.corpus.records) if (r.kind === "quran") for (const w of windows(r.text, 5)) quranWindows.add(w);
-  return quranWindows;
+  const hit = quranWindowsByIndex.get(index);
+  if (hit) return hit;
+  const set = new Set<string>();
+  for (const r of index.corpus.records) if (r.kind === "quran") for (const w of windows(r.text, 5)) set.add(w);
+  quranWindowsByIndex.set(index, set);
+  return set;
 }
 
 const CONSENSUS = /أجمع\s*(ال)?علماء|بالإجماع|بإجماع|إجماع\s*(ال)?(أمة|علماء|المسلمين)|اتفق\s*(ال)?علماء/;
