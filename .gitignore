@@ -197,6 +197,13 @@ next-env.d.ts
 !/data/embeddings.json
 !/data/private.enc
 !/data/ingest-log.json
+# v2 index: the encrypted corpus and its vectors (ids, hashes and int8 numbers, no text).
+# The plaintext corpus.json and data/v2/books/ stay local.
+!/data/v2/
+/data/v2/*
+!/data/v2/corpus.enc
+!/data/v2/vectors.i8.bin
+!/data/v2/vectors.json
 
 # Local work for the v2 rebuild: decrypted text, analysis, eval runs, traces, golden set, screenshots.
 /local/

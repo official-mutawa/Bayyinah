@@ -20,7 +20,7 @@ const BLOCKED_PATHS = [
   [/^sources\/(?!README\.md$|manifest\.json$|manifest\.example\.json$|mushafs-1\.json\.gz$|tafsir-book-2012\.json\.gz$)/, "source file that is not approved for the repo"],
   [/\.chunks\.json$/, "book chunks"],
   [/^sources\/ocr\//, "OCR page text"],
-  [/^data\/v2\/(?!.*\.enc$)/, "unencrypted v2 index data"],
+  [/^data\/v2\/(?!corpus\.enc$|vectors\.i8\.bin$|vectors\.json$)/, "unencrypted v2 index data"],
 ];
 for (const f of staged) for (const [re, why] of BLOCKED_PATHS) if (re.test(f)) problems.push(`${f}: ${why}`);
 

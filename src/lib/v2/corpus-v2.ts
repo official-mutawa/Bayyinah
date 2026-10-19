@@ -1,14 +1,19 @@
 // Loads the v2 corpus and its vectors, and builds per-source keyword indexes in memory.
-// v2 artifacts live next to v1's: data/v2/corpus.json, data/v2/vectors.i8.bin, data/v2/vectors.json.
+// v2 artifacts live next to v1's: data/v2/corpus.enc (committed, encrypted), data/v2/vectors.i8.bin
+// and data/v2/vectors.json (committed, no text). The plaintext data/v2/corpus.json is a local build
+// output only (gitignored); scripts/v2/encrypt-corpus.ts turns it into corpus.enc.
 
+import { createDecipheriv } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { gunzipSync } from "node:zlib";
 import { BM25 } from "../bm25.ts";
 import { normalizeArabic, standardSpelling } from "../arabic.ts";
 import type { V2Child, V2Corpus, V2Record } from "./types.ts";
 
 export const V2_DIR = () => path.join(process.cwd(), "data", "v2");
 export const V2_CORPUS = () => path.join(V2_DIR(), "corpus.json");
+export const V2_CORPUS_ENC = () => path.join(V2_DIR(), "corpus.enc");
 export const V2_VECTORS_BIN = () => path.join(V2_DIR(), "vectors.i8.bin");
 export const V2_VECTORS_META = () => path.join(V2_DIR(), "vectors.json");
 
@@ -53,12 +58,33 @@ export function unitsOf(corpus: V2Corpus): Unit[] {
   return units;
 }
 
+/**
+ * Decrypt a v2 corpus bundle: 12-byte IV, 16-byte GCM tag, then AES-256-GCM of the gzipped JSON
+ * (the same layout as v1's data/private.enc, with the same key, BAYYINAH_INDEX_KEY).
+ */
+export function decryptV2Corpus(buf: Buffer, key: string): V2Corpus {
+  const decipher = createDecipheriv("aes-256-gcm", Buffer.from(key, "hex"), buf.subarray(0, 12));
+  decipher.setAuthTag(buf.subarray(12, 28));
+  const plain = Buffer.concat([decipher.update(buf.subarray(28)), decipher.final()]);
+  return JSON.parse(gunzipSync(plain).toString("utf8")) as V2Corpus;
+}
+
+/** The encrypted bundle when present (needs BAYYINAH_INDEX_KEY), else the local plaintext build. */
+export function readV2Corpus(): V2Corpus {
+  if (existsSync(V2_CORPUS_ENC())) {
+    const key = process.env.BAYYINAH_INDEX_KEY;
+    if (!key || key.length !== 64) throw new Error("v2 corpus is encrypted: BAYYINAH_INDEX_KEY (64 hex chars) is required");
+    return decryptV2Corpus(readFileSync(V2_CORPUS_ENC()), key);
+  }
+  if (existsSync(V2_CORPUS())) return JSON.parse(readFileSync(V2_CORPUS(), "utf8")) as V2Corpus;
+  throw new Error("v2 corpus missing: run scripts/v2/build-records.ts, then scripts/v2/encrypt-corpus.ts");
+}
+
 let cached: V2Index | null = null;
 
 export function loadV2Index(): V2Index {
   if (cached) return cached;
-  if (!existsSync(V2_CORPUS())) throw new Error("v2 corpus missing: run scripts/v2/build-records.ts");
-  const corpus = JSON.parse(readFileSync(V2_CORPUS(), "utf8")) as V2Corpus;
+  const corpus = readV2Corpus();
   let vectors: V2Index["vectors"] = null;
   if (existsSync(V2_VECTORS_META()) && existsSync(V2_VECTORS_BIN())) {
     const meta = JSON.parse(readFileSync(V2_VECTORS_META(), "utf8")) as { ids: string[]; scales: number[]; dims: number; model: string };
