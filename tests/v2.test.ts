@@ -391,3 +391,157 @@ test("citation panel: supporting sentence first, then source line, context, and 
   assert.equal(panel.full.segments.map((x) => x.text).join(""), rec.text);
   assert.ok(panel.full.segments.some((x) => x.highlight));
 });
+
+// ---------- Scope backstop (phrase list before the planner; no model call) ----------
+
+const MUST_REFUSE: [string, string][] = [
+  ["هل الجاهل معذور بجهله في أمور التوحيد؟", "disputed"],
+  ["ما حكم العذر بالجهل عند أهل السنة؟", "disputed"],
+  ["هل يجوز تكفير المسلم الذي يقع في الشرك جاهلًا؟", "disputed"],
+  ["ما ضوابط التكفير؟", "disputed"],
+  ["هل يجوز الخروج على الحاكم الظالم؟", "disputed"],
+  ["Is a Muslim excused by ignorance if he commits shirk?", "disputed"],
+  ["Is it allowed to rebel against a Muslim ruler?", "disputed"],
+  ["أبي مات وهو لا يصلي، هل هو في النار؟", "fate-of-person"],
+  ["صديقي مسيحي ومات، هل مصيره إلى النار؟", "fate-of-person"],
+  ["Will my non-Muslim parents go to hell?", "fate-of-person"],
+  ["هل يغفر الله لأبي؟", "fate-of-person"],
+  ["هل الشيعة كفار؟", "label-person-or-muslim-group"],
+  ["Are Shias disbelievers?", "label-person-or-muslim-group"],
+  ["Is my friend who left Islam an apostate?", "label-person-or-muslim-group"],
+  ["هل كل المسيحيين الموجودين اليوم مصيرهم إلى النار؟", "INTERIM-afterlife-fate-of-group"],
+  ["هل اليهود يدخلون النار؟", "INTERIM-afterlife-fate-of-group"],
+  ["هل يدخل المسيحيون الجنة؟", "INTERIM-afterlife-fate-of-group"],
+  ["هل لليهود نصيب في الجنة؟", "INTERIM-afterlife-fate-of-group"],
+  ["Do all Christians go to hell?", "INTERIM-afterlife-fate-of-group"],
+  ["Do Muslims believe Jews and Christians go to hell?", "INTERIM-afterlife-fate-of-group"],
+  ["Are Christians saved?", "INTERIM-afterlife-fate-of-group"],
+  // Interim rule: general classes, asked as WHETHER / WHO.
+  ["ما مصير من لم تبلغه دعوة الإسلام؟", "INTERIM-afterlife-fate-of-group"],
+  ["ماذا يحدث لمن لم يسمع بالإسلام أبدًا؟", "INTERIM-afterlife-fate-of-group"],
+  ["ما مصير أطفال غير المسلمين إذا ماتوا صغارًا؟", "INTERIM-afterlife-fate-of-group"],
+  ["هل الإسلام يقول إن كل من ليس مسلمًا في النار؟", "INTERIM-afterlife-fate-of-group"],
+  ["What happens to people who never heard of Islam?", "INTERIM-afterlife-fate-of-group"],
+  ["What is the fate of those who never received the message?", "INTERIM-afterlife-fate-of-group"],
+  ["Does Islam teach that all non-Muslims go to hell?", "INTERIM-afterlife-fate-of-group"],
+  ["هل يعذب الله الكفار في النار؟", "INTERIM-afterlife-fate-of-group"],
+  ["Do non-Muslims go to hell forever?", "INTERIM-afterlife-fate-of-group"],
+];
+
+const MUST_PASS = [
+  // Ordinary in-scope questions
+  "ما هو الشرك؟",
+  "لماذا خلق الله الشر؟",
+  "إذا كان الله رحيمًا فلماذا يعذب الناس في النار؟",
+  "كيف ينظر الإسلام إلى المسيحيين واليهود؟",
+  "هل الصلاة سبب في تكفير الذنوب؟",
+  "ما معنى الكفر في القرآن؟",
+  "لماذا يسمي القرآن أهل الكتاب كفارًا؟",
+  "ما هي الجنة وما صفاتها في القرآن؟",
+  "Why would a merciful God send people to hell?",
+  "What does Islam say about Jesus?",
+  "How should a Muslim treat Christian neighbours?",
+  "هل يؤمن اليهود بالجنة والنار؟",
+  "هل يدخل الإنسان الجنة بعمله؟",
+  "Do Christians believe in heaven and hell?",
+  "ما الفرق بين عقيدة المسلمين والمسيحيين في الآخرة؟",
+  // Afterlife with no group
+  "كيف يصف الإسلام يوم القيامة؟",
+  "How does Islam describe the Day of Judgment?",
+  "هل النار أبدية؟",
+  // "Is religion X disbelief" is doctrinal: left to the planner
+  "هل النصارى اليوم كفار؟",
+  "Why does the Quran call Christians disbelievers?",
+  // This life, not the afterlife
+  "ماذا يحدث للمسيحيين في الدولة الإسلامية؟",
+  "What happens to non-Muslims living in a Muslim country?",
+  "My friend saved my life, how do I thank him?",
+  // Why / wisdom / justice exception to the interim rule
+  "لماذا يعذب الله الكفار في النار إلى الأبد؟",
+  "Why would God punish disbelievers forever?",
+  "ما الحكمة من خلود الكفار في النار؟",
+  "كيف يتفق تعذيب غير المسلمين في النار مع رحمة الله؟",
+  "How is it fair that non-Muslims go to hell?",
+  "أليس من الظلم أن يدخل غير المسلمين النار؟",
+  // Not caught by the list on purpose: the planner decides
+  "ماذا قال ابن تيمية عن الفلسفة اليونانية؟",
+];
+
+test("scope backstop: refuses disputed issues and judgments, with the expected rule", async () => {
+  const { scopeBackstop } = await import("../src/lib/v2/scope-backstop.ts");
+  for (const [q, rule] of MUST_REFUSE) assert.equal(scopeBackstop(q)?.rule ?? null, rule, q);
+});
+
+test("scope backstop: ordinary, general-afterlife, doctrinal and why-questions pass to the planner", async () => {
+  const { scopeBackstop } = await import("../src/lib/v2/scope-backstop.ts");
+  for (const q of MUST_PASS) assert.equal(scopeBackstop(q), null, q);
+});
+
+test("scope backstop: matches whole phrases after normalization only", async () => {
+  const { scopeBackstop, normalizeForScope } = await import("../src/lib/v2/scope-backstop.ts");
+  assert.equal(normalizeForScope("هَلْ يُعْذَرُ الجاهِلُ؟"), "هل يعذر الجاهل");
+  assert.equal(normalizeForScope("إلى أهل القِبلة"), "الي اهل القبله");
+  assert.ok(scopeBackstop("هَلْ يُعْذَرُ الجَاهِلُ في مسائلِ العقيدةِ؟"), "diacritics do not hide a phrase");
+  assert.equal(scopeBackstop("التكفيرية"), null, "no match inside a longer word");
+  assert.equal(scopeBackstop("ما هو التكفير عن اليمين؟"), null, "expiation is not takfir");
+});
+
+test("planner: a backstop hit makes no model call and plans out of scope", async () => {
+  const { plan } = await import("../src/lib/v2/planner.ts");
+  const real = globalThis.fetch;
+  let called = 0;
+  globalThis.fetch = (async () => {
+    called++;
+    throw new Error("no network in this test");
+  }) as typeof fetch;
+  try {
+    const r = await plan("هل يجوز الخروج على الحاكم الظالم؟");
+    assert.equal(called, 0);
+    assert.equal(r.meta, null);
+    assert.equal(r.backstop?.rule, "disputed");
+    assert.equal(r.plan.category, "out_of_scope");
+    assert.equal(r.plan.out_of_scope_kind, "major_disputed_issue");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("end to end: the backstop overrides an in-scope plan sent back by the browser", async () => {
+  const { askV2 } = await import("../src/lib/v2/pipeline-v2.ts");
+  const real = globalThis.fetch;
+  process.env.OPENAI_API_KEY = "test-key-not-real";
+  try {
+    const calls = mockFetch(routes());
+    const r = await askV2("هل اليهود يدخلون النار؟", () => {}, { plan: plan1, hadithFailed: true }, { index: synthIndex() });
+    assert.equal(r.status, "out_of_scope");
+    assert.ok(r.abstain_reason.includes("أهل العلم"));
+    assert.deepEqual(calls, [], "no model call and no search");
+  } finally {
+    globalThis.fetch = real;
+  }
+});
+
+test("end to end: post-answer gate turns an answer that misses the main question into partial with a referral", async () => {
+  const { askV2 } = await import("../src/lib/v2/pipeline-v2.ts");
+  const real = globalThis.fetch;
+  process.env.OPENAI_API_KEY = "test-key-not-real";
+  const oneSub = (): Record<string, Route> => ({
+    ...routes(),
+    question_plan: () => ({ ...plan1, sub_questions: [{ id: "q1", text: "ما الغاية؟" }] }),
+    answer_draft: (b) => ({ ...(routes().answer_draft(b) as object), gaps: [] }),
+  });
+  try {
+    mockFetch({ ...oneSub(), whole_review: () => ({ issues: [], uncovered: ["أصل السؤال"], main_question_answered: false }) });
+    const r = await askV2("ما الغاية من الخلق؟", () => {}, { hadithFailed: true }, { index: synthIndex() });
+    assert.equal(r.status, "partial");
+    assert.equal(r.gaps[0].subQuestion, "main");
+    assert.ok(r.gaps[0].text.includes("أهل العلم"));
+    assert.ok(r.summary || r.sections.length, "the related points are still shown");
+    mockFetch({ ...oneSub(), whole_review: () => ({ issues: [], uncovered: [], main_question_answered: true }) });
+    const ok = await askV2("ما الغاية من الخلق؟", () => {}, { hadithFailed: true }, { index: synthIndex() });
+    assert.equal(ok.status, "answer");
+    assert.ok(!ok.gaps.some((g) => g.subQuestion === "main"));
+  } finally {
+    globalThis.fetch = real;
+  }
+});

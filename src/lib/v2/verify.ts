@@ -275,7 +275,7 @@ export function settle(item: CheckedItem): void {
 const WHOLE_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["issues", "uncovered"],
+  required: ["issues", "uncovered", "main_question_answered"],
   properties: {
     issues: {
       type: "array",
@@ -292,6 +292,7 @@ const WHOLE_SCHEMA = {
       },
     },
     uncovered: { type: "array", items: { type: "string" } },
+    main_question_answered: { type: "boolean" },
   },
 };
 
@@ -304,12 +305,13 @@ const WHOLE_INSTRUCTIONS = `You review a complete draft answer (already checked 
 - judgment_on_fate: any judgment on a person's or group's fate.
 - forced_verse: a verse used for a point that its cited tafsir does not directly address for THIS question (a general principle or another situation applied here); severity block, naming the claim that uses it.
 claims: the SMALLEST set of claim ids whose removal fixes the issue (e.g. ["q2:C3"]); for emergent_claim name only the claim that adds the unsupported link, not every claim involved; never empty for a block. severity: block only when the answer must not be shown with those claims; otherwise note.
-uncovered: checklist points the answer does not address (short Arabic).`;
+uncovered: checklist points the answer does not address (short Arabic).
+main_question_answered: true only if the answer directly answers the main QUESTION itself. false when it only covers related or surrounding points and never answers what was actually asked (e.g. general principles near a disputed issue, without the answer to it).`;
 
-export async function wholeReview(question: string, checklist: string[], claims: { id: string; text: string; sources: string }[]): Promise<{ result: { issues: { claims: string[]; type: string; severity: "block" | "note"; note: string }[]; uncovered: string[] } | null; meta: CallMeta | null; error: string | null }> {
+export async function wholeReview(question: string, checklist: string[], claims: { id: string; text: string; sources: string }[]): Promise<{ result: { issues: { claims: string[]; type: string; severity: "block" | "note"; note: string }[]; uncovered: string[]; main_question_answered?: boolean } | null; meta: CallMeta | null; error: string | null }> {
   if (!claims.length) return { result: { issues: [], uncovered: [] }, meta: null, error: null };
   try {
-    const { data, meta } = await reviewerCall<{ issues: { claims: string[]; type: string; severity: "block" | "note"; note: string }[]; uncovered: string[] }>({
+    const { data, meta } = await reviewerCall<{ issues: { claims: string[]; type: string; severity: "block" | "note"; note: string }[]; uncovered: string[]; main_question_answered?: boolean }>({
       name: "whole_review",
       schema: WHOLE_SCHEMA,
       instructions: WHOLE_INSTRUCTIONS,
