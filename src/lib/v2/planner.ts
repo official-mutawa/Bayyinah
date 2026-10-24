@@ -3,6 +3,7 @@
 
 import { V2_LIMITS, V2_MODELS } from "./config.ts";
 import { openaiStructured, type CallMeta } from "./llm.ts";
+import { INTERIM_PLANNER_POLICY, scopeBackstop, type BackstopHit } from "./scope-backstop.ts";
 
 export const CATEGORIES = ["عقيدة", "شبهة", "سيرة", "أخلاق", "عبادات عامة", "out_of_scope"] as const;
 export const OOS_KINDS = ["none", "personal_fatwa", "disputed_fiqh", "major_disputed_issue", "judgment_on_person_or_group", "current_events"] as const;
@@ -23,12 +24,13 @@ export interface Plan {
 const SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["answer_language", "intent", "category", "out_of_scope_kind", "ambiguity", "sub_questions", "coverage_checklist", "quoted_verse_wording", "queries"],
+  // Scope comes first: structured output is generated in schema order, so it is decided before anything else.
+  required: ["out_of_scope_kind", "category", "answer_language", "intent", "ambiguity", "sub_questions", "coverage_checklist", "quoted_verse_wording", "queries"],
   properties: {
+    out_of_scope_kind: { type: "string", enum: [...OOS_KINDS] },
+    category: { type: "string", enum: [...CATEGORIES] },
     answer_language: { type: "string", enum: ["ar", "en", "other"] },
     intent: { type: "string" },
-    category: { type: "string", enum: [...CATEGORIES] },
-    out_of_scope_kind: { type: "string", enum: [...OOS_KINDS] },
     ambiguity: { type: "string" },
     sub_questions: {
       type: "array",
@@ -51,16 +53,22 @@ const SCHEMA = {
 
 const INSTRUCTIONS = `You analyse a question that a Muslim daʿi was asked by a non-Muslim, before any source is searched. You do NOT answer it. Output Arabic for every field except answer_language and ids.
 
-- answer_language: the language the question is written in ("ar", "en", or "other").
-- intent: one short Arabic sentence saying what the asker wants to know.
-- category: one of عقيدة، شبهة، سيرة، أخلاق، عبادات عامة، or out_of_scope.
-- out_of_scope and out_of_scope_kind (otherwise "none"):
+Decide scope FIRST, before every other field.
+- out_of_scope_kind ("none" when in scope), and category "out_of_scope" whenever out_of_scope_kind is not "none":
   * personal_fatwa: a ruling or fatwa for a specific personal situation (marriage, divorce, money, worship of a named person).
   * disputed_fiqh: a fine-grained fiqh ruling on which scholars differ (e.g. the ruling on music, covering the face).
   * major_disputed_issue: a major issue that scholars dispute, e.g. whether ignorance excuses in matters of creed (العذر بالجهل), declaring Muslims disbelievers (التكفير), or rebellion against rulers.
-  * judgment_on_person_or_group: whether a specific person or group is in Paradise or Hell, is a disbeliever, etc.
+  * judgment_on_person_or_group: whether a specific person (named, or a relative or friend of the asker) or a Muslim group is in Paradise or Hell, is saved, punished or forgiven, or is a disbeliever or apostate.
+${INTERIM_PLANNER_POLICY}
   * current_events: news or events happening now.
-  General questions about Islam's teachings, worship in general, ethics, history (sīrah), creed and common objections are in scope.
+- Rule: creed is in scope, but a creed question that asks for a ruling on a disputed issue, or for a judgment on people, is OUT of scope even though it is about creed.
+- Asking how Islam or the Quran describes another religion's beliefs (e.g. "Why does the Quran call Christians disbelievers?") is a doctrinal question and is in scope.
+- General questions about Islam's teachings, worship in general, ethics, history (sīrah), creed and common objections are in scope.
+- category (when in scope): one of عقيدة، شبهة، سيرة، أخلاق، عبادات عامة.
+
+Then:
+- answer_language: the language the question is written in ("ar", "en", or "other").
+- intent: one short Arabic sentence saying what the asker wants to know.
 - ambiguity: "" unless the question can be read in clearly different ways; then say so briefly.
 - sub_questions: 1 to ${V2_LIMITS.maxSubQuestions} answerable sub-questions or claims needing evidence, ids "q1", "q2"… A simple question has one.
 - coverage_checklist: 2 to 6 short points a complete answer must address, taken only from the question itself.
@@ -94,15 +102,38 @@ export function sanitizePlan(raw: unknown, question: string): Plan | null {
   return out.sub_questions.length ? out : null;
 }
 
-export async function plan(question: string): Promise<{ plan: Plan; meta: CallMeta }> {
+/** The plan for a question the scope backstop stopped: out of scope, nothing to search. */
+export function backstopPlan(question: string, hit: BackstopHit): Plan {
+  return {
+    answer_language: /[؀-ۿ]/.test(question) ? "ar" : /[a-z]/i.test(question) ? "en" : "other",
+    intent: "",
+    category: "out_of_scope",
+    out_of_scope_kind: hit.kind,
+    ambiguity: "",
+    sub_questions: [{ id: "q1", text: question }],
+    coverage_checklist: [],
+    quoted_verse_wording: [],
+    queries: { quran: [], hadith: [], books: [] },
+  };
+}
+
+/** Plan a question. The scope backstop runs first; when it fires, no model is called (meta is null). */
+export async function plan(question: string): Promise<{ plan: Plan; meta: CallMeta | null; backstop: BackstopHit | null }> {
+  const hit = scopeBackstop(question);
+  if (hit) return { plan: backstopPlan(question, hit), meta: null, backstop: hit };
+  return { ...(await planWithModel(question)), backstop: null };
+}
+
+/** The model planner alone, without the backstop (used by plan() and by the planner check). */
+export async function planWithModel(question: string): Promise<{ plan: Plan; meta: CallMeta }> {
   const { data, meta } = await openaiStructured<Plan>({
     name: "question_plan",
     schema: SCHEMA,
     instructions: INSTRUCTIONS,
     input: question,
     model: V2_MODELS.planner(),
-    effort: "low",
-    maxOutputTokens: 4000,
+    effort: "medium",
+    maxOutputTokens: 6000,
     timeoutMs: 45000,
   });
   data.sub_questions = data.sub_questions.slice(0, V2_LIMITS.maxSubQuestions);

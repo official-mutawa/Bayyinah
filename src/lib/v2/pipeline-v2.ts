@@ -12,7 +12,8 @@ import { loadV2Index, vectorSearch, type V2Index } from "./corpus-v2.ts";
 import { analyseSource, buildEvidenceMap, buildOutline, excerptSentences, gradeSource, type Card, type EvidenceMap } from "./evidence.ts";
 import { filterHadith, type HadithEvidence } from "./hadith.ts";
 import { openaiStructured, type CallMeta } from "./llm.ts";
-import { plan as makePlan, type Plan } from "./planner.ts";
+import { backstopPlan, plan as makePlan, type Plan } from "./planner.ts";
+import { scopeBackstop } from "./scope-backstop.ts";
 import { APPROVED_SOURCES, BOOK_SOURCES, retrieveAll, type SourceStatus } from "./retrieve.ts";
 import type { Speaker, V2Record } from "./types.ts";
 import { mechanicalCheck, semanticReview, settle, wholeReview, type CheckedItem, type ResolvedCite } from "./verify.ts";
@@ -116,6 +117,9 @@ const OOS_TEXT: Record<string, string> = {
   judgment_on_person_or_group: "هذا سؤال عن الحكم على شخص أو جماعة بعينها، وليس هذا مما تقدّم فيه الأداة مسودة. ننصح بالرجوع إلى أهل العلم.",
   current_events: "هذا سؤال عن أحداث جارية، والمصادر المعتمدة هنا لا تتناولها. ننصح بالرجوع إلى أهل العلم.",
 };
+
+/** Post-answer gate: the whole-answer review found that the main question itself was not answered. */
+const MAIN_UNANSWERED = "لم تُجب المصادر المعتمدة عن أصل السؤال مباشرة، وما يُعرض هنا نقاط متصلة به فقط. ننصح بالرجوع إلى أهل العلم في أصل المسألة.";
 
 // ---------- Helpers ----------
 
@@ -298,12 +302,15 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
   // Stage 1: understand the question.
   let t0 = Date.now();
   emit({ type: "stage", stage: "understanding", state: "active" });
-  let plan = opts.plan;
+  // The backstop runs on the server even when the browser sent a plan back.
+  const stop = scopeBackstop(question);
+  let plan = stop ? backstopPlan(question, stop) : opts.plan;
   if (!plan) {
     const r = await makePlan(question);
     plan = r.plan;
-    metas.push(r.meta);
+    if (r.meta) metas.push(r.meta);
   }
+  if (stop) trace.backstop = stop;
   emit({ type: "stage", stage: "understanding", state: "done" });
   mark("understanding", t0);
   trace.plan = plan;
@@ -569,7 +576,10 @@ export async function askV2(question: string, emit: (e: PipelineEventV2) => void
   const summary = finalParts.find((p) => p.id === "summary") ?? null;
   const sections = finalParts.filter((p) => p.id !== "summary");
   const answeredSubs = new Set(sections.map((s) => s.id));
+  // Post-answer gate: when the main question itself is uncovered, the answer is partial, with a referral.
+  const mainUnanswered = whole.result?.main_question_answered === false;
   const gaps = [
+    ...(mainUnanswered ? [{ subQuestion: "main", text: MAIN_UNANSWERED }] : []),
     ...draft.gaps.filter((g) => plan!.sub_questions.some((q) => q.id === g.sub_question) && !answeredSubs.has(g.sub_question)).map((g) => ({ subQuestion: g.sub_question, text: g.text })),
     ...plan.sub_questions.filter((q) => !answeredSubs.has(q.id) && !draft.gaps.some((g) => g.sub_question === q.id)).map((q) => ({ subQuestion: q.id, text: `لم أجد في المصادر المعتمدة ما يجيب عن: ${q.text}` })),
   ];
