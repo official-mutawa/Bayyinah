@@ -77,12 +77,12 @@ export interface AskResult {
 
 // ---------- Index (built once per server instance) ----------
 
-interface SourceIndex extends StageSource {
+export interface SourceIndex extends StageSource {
   ids: string[];
   bm25: BM25;
 }
 
-interface Index {
+export interface Index {
   byId: Map<string, Passage>;
   /** 5-word skeleton windows of every Quran verse */
   quranWindows: Set<string>;
@@ -151,13 +151,13 @@ async function rewrite(question: string, sources: StageSource[]): Promise<string
 
 // ---------- Step 2: hybrid retrieval ----------
 
-const RRF_K = 60;
-const LIST_DEPTH = 20;
-const FINAL_COUNT = 10;
-const DORAR_COUNT = 3;
-const MIN_PER_SOURCE = 2;
+export const RRF_K = 60;
+export const LIST_DEPTH = 20;
+export const FINAL_COUNT = 10;
+export const DORAR_COUNT = 3;
+export const MIN_PER_SOURCE = 2;
 
-type Ranked = { scores: Map<string, number>; via: Map<string, Set<"keyword" | "meaning">> };
+export type Ranked = { scores: Map<string, number>; via: Map<string, Set<"keyword" | "meaning">> };
 
 function fuse(lists: { ids: string[]; via: "keyword" | "meaning" }[]): Ranked {
   const scores = new Map<string, number>();
@@ -172,7 +172,7 @@ function fuse(lists: { ids: string[]; via: "keyword" | "meaning" }[]): Ranked {
   return { scores, via };
 }
 
-function searchCorpus(
+export function searchCorpus(
   part: { ids: string[]; bm25: BM25 },
   vectors: VectorStore,
   queries: string[],
@@ -186,7 +186,7 @@ function searchCorpus(
   return fuse(lists);
 }
 
-function select(index: Index, ranked: Ranked[]): RetrievedPassage[] {
+export function select(index: Index, ranked: Ranked[]): RetrievedPassage[] {
   const score = new Map<string, number>();
   const via = new Map<string, Set<"keyword" | "meaning">>();
   for (const r of ranked) {
@@ -218,7 +218,7 @@ function select(index: Index, ranked: Ranked[]): RetrievedPassage[] {
 
 // ---------- Step 3: grounded draft ----------
 
-interface Draft {
+export interface Draft {
   status: "answer" | "abstain";
   claims: { text: string; passage_ids: string[]; supporting_quote: string }[];
   abstain_reason: string;
@@ -272,7 +272,7 @@ Abstain (status "abstain", claims []) when:
 - the question asks for a judgment on a specific person or group (for example who is in Paradise or Hell).
 When abstaining: abstain_reason is one or two calm Arabic sentences explaining why; missing says in Arabic what evidence or expertise would be needed. Never accuse the asker of bad intent.`;
 
-function formatPassages(passages: RetrievedPassage[]): string {
+export function formatPassages(passages: RetrievedPassage[]): string {
   return passages
     .map((p) => {
       const type = p.kind === "quran" ? "آية" : p.kind === "tafsir" ? "تفسير" : p.kind === "hadith" ? "حديث" : "نص";
@@ -286,7 +286,7 @@ function formatPassages(passages: RetrievedPassage[]): string {
     .join("\n\n");
 }
 
-async function draft(question: string, passages: RetrievedPassage[], feedback: string | null): Promise<Draft> {
+export async function draft(question: string, passages: RetrievedPassage[], feedback: string | null): Promise<Draft> {
   let input = `QUESTION:\n${question}\n\nPASSAGES:\n${formatPassages(passages)}`;
   if (feedback) input += `\n\nYOUR PREVIOUS DRAFT FAILED THESE CHECKS. Fix every issue, drop claims you cannot support exactly, or abstain:\n${feedback}`;
   return structuredResponse<Draft>({
@@ -315,7 +315,7 @@ function wordWindows(text: string, size: number): Set<string> {
   return out;
 }
 
-function codeCheck(d: Draft, passages: RetrievedPassage[], quranWindows: Set<string>): CheckedClaim[] {
+export function codeCheck(d: Draft, passages: RetrievedPassage[], quranWindows: Set<string>): CheckedClaim[] {
   const byId = new Map(passages.map((p) => [p.id, p]));
   return d.claims.map((claim) => {
     const issues: string[] = [];
@@ -357,7 +357,7 @@ For each item decide only whether those passages, read on their own, support the
 "not_supported": anything else, including claims that go beyond, generalize, or add to what the passages say.
 Give a short reason in Arabic (one sentence). Return one result per item, in the same order, with its claim_index.`;
 
-async function verify(
+export async function verify(
   claims: Draft["claims"],
   byId: Map<string, Passage>
 ): Promise<{ claim_index: number; verdict: "supported" | "not_supported"; reason: string }[]> {

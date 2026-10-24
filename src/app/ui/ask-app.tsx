@@ -15,6 +15,19 @@ import { HomeHero } from "./home-hero";
 import { SiteHeader } from "./site-header";
 import { CheckIcon } from "./icons";
 import { ResultView } from "./result-view";
+import { ResultViewV2 } from "./v2/result-view-v2";
+import type { AskResultV2, PipelineEventV2, StageV2, V2Part } from "@/lib/v2/pipeline-v2";
+import type { Plan } from "@/lib/v2/planner";
+
+const V2_STAGE: Record<StageV2, { label: string; kind: PassageKind | null }> = {
+  understanding: { label: "أفهم السؤال", kind: null },
+  "search-quran": { label: "أبحث في القرآن والتفسير", kind: "quran" },
+  "search-books": { label: "أبحث في الكتب", kind: "text" },
+  "search-hadith": { label: "أبحث في الحديث", kind: "hadith" },
+  analysing: { label: "أحلل ما وجدته في كل مصدر", kind: null },
+  writing: { label: "أكتب الجواب", kind: null },
+  verifying: { label: "أتحقق من كل جملة", kind: null },
+};
 
 type StageEvent = Extract<PipelineEvent, { type: "stage" }>;
 
@@ -100,6 +113,8 @@ export function AskApp() {
   const [stages, setStages] = useState<StageRow[]>([]);
   const [label, setLabel] = useState<BookLabel | null>(null);
   const [result, setResult] = useState<AskResult | null>(null);
+  const [resultV2, setResultV2] = useState<AskResultV2 | null>(null);
+  const [partialV2, setPartialV2] = useState<AskResultV2 | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [invalid, setInvalid] = useState<string | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -148,6 +163,38 @@ export function AskApp() {
     if (l) pushLabel(l);
   }
 
+  function onStageV2(e: Extract<PipelineEventV2, { type: "stage" }>) {
+    const meta = V2_STAGE[e.stage];
+    const detail = e.note ?? (e.stage.startsWith("search") && e.count !== undefined && meta.kind ? foundLabel(meta.kind, e.count) : undefined);
+    setStages((prev) => {
+      const i = prev.findIndex((r) => r.key === e.stage);
+      const row = { key: e.stage, label: meta.label, detail, state: e.state };
+      if (i >= 0) {
+        const next = [...prev];
+        next[i] = { ...next[i], ...row, detail: row.detail ?? next[i].detail };
+        return next;
+      }
+      return [...prev, row];
+    });
+    if (meta.kind) lastKind.current = meta.kind;
+    if (e.state === "active") pushLabel({ text: meta.label, kind: meta.kind ?? lastKind.current, phase: e.stage.startsWith("search") || e.stage === "understanding" ? "searching" : "writing" });
+  }
+
+  function onPartV2(e: Extract<PipelineEventV2, { type: "part" }>) {
+    setPartialV2((prev) => {
+      const base: AskResultV2 = prev ?? ({ version: "v2", status: "answer", language: "ar", summary: null, sections: [], gaps: [], abstain_reason: "", missing: "", sources: [], records: {}, verses: {}, hadith: {}, verified: false, reviewer: { provider: "", model: "", crossFamily: false }, notes: ["تكتمل بقية الإجابة والتحقق منها الآن…"], models: {}, ms: 0, timings: {}, traceId: null } as AskResultV2);
+      const part: V2Part = e.part;
+      return {
+        ...base,
+        summary: part.id === "summary" ? part : base.summary,
+        sections: part.id === "summary" ? base.sections : [...base.sections.filter((s) => s.id !== part.id), part],
+        records: { ...base.records, ...e.records },
+        verses: { ...base.verses, ...e.verses },
+        hadith: { ...base.hadith, ...e.hadith },
+      };
+    });
+  }
+
   async function submit(text: string) {
     const q = text.trim();
     if (q.length < 4) {
@@ -160,6 +207,8 @@ export function AskApp() {
     setPhase("running");
     setStages([]);
     setResult(null);
+    setResultV2(null);
+    setPartialV2(null);
     setError(null);
     try {
       // 1. Search queries from the server.
@@ -169,9 +218,13 @@ export function AskApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question: q }),
       });
-      const qbody = (await qres.json().catch(() => null)) as { queries?: string[]; message?: string } | null;
+      const qbody = (await qres.json().catch(() => null)) as { queries?: string[]; message?: string; version?: "v2"; plan?: Plan } | null;
       if (!qres.ok || !qbody?.queries) throw new Error(qbody?.message ?? "تعذّر الاتصال بالخدمة. أعد المحاولة.");
-      onStage({ type: "stage", stage: "rewriting", state: "done", queries: qbody.queries });
+      const v2 = qbody.version === "v2";
+      if (v2) {
+        // v2: the first step was the question analysis.
+        setStages([{ key: "understanding", label: V2_STAGE.understanding.label, state: "done" }]);
+      } else onStage({ type: "stage", stage: "rewriting", state: "done", queries: qbody.queries });
 
       // 2. Hadith from Dorar, searched by this browser (JSONP) and passed on exactly as returned.
       const dorar = await searchDorarInBrowser(qbody.queries);
@@ -180,7 +233,7 @@ export function AskApp() {
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: q, queries: qbody.queries, hadith: dorar.items, hadithFailed: dorar.failed }),
+        body: JSON.stringify(v2 ? { question: q, plan: qbody.plan, hadith: dorar.items, hadithFailed: dorar.failed } : { question: q, queries: qbody.queries, hadith: dorar.items, hadithFailed: dorar.failed }),
       });
       if (!res.ok || !res.body) {
         const body = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -188,7 +241,7 @@ export function AskApp() {
       }
       const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
       let buffer = "";
-      let final: AskResult | null = null;
+      let final: AskResult | AskResultV2 | null = null;
       for (;;) {
         const { value, done } = await reader.read();
         if (done) break;
@@ -198,15 +251,21 @@ export function AskApp() {
           const line = buffer.slice(0, nl).trim();
           buffer = buffer.slice(nl + 1);
           if (!line) continue;
-          const e = JSON.parse(line) as PipelineEvent;
-          if (e.type === "stage") onStage(e);
+          const e = JSON.parse(line) as PipelineEvent | PipelineEventV2;
+          if (e.type === "stage") {
+            if (v2) onStageV2(e as Extract<PipelineEventV2, { type: "stage" }>);
+            else onStage(e as StageEvent);
+          } else if (e.type === "part") onPartV2(e);
           else if (e.type === "result") final = e.result;
           else if (e.type === "error") throw new Error(e.message);
         }
       }
       if (!final) throw new Error("انقطع الاتصال قبل اكتمال الإجابة. أعد المحاولة.");
       clearLabels();
-      setResult(final);
+      if ("version" in final && final.version === "v2") {
+        setPartialV2(null);
+        setResultV2(final);
+      } else setResult(final as AskResult);
       setPhase("done");
       requestAnimationFrame(() => {
         resultRef.current?.scrollIntoView({ block: "start" });
@@ -225,6 +284,8 @@ export function AskApp() {
     setPhase("idle");
     setStages([]);
     setResult(null);
+    setResultV2(null);
+    setPartialV2(null);
     setError(null);
     inputRef.current?.focus();
     window.scrollTo({ top: 0 });
@@ -382,6 +443,16 @@ export function AskApp() {
           {result && (
             <div ref={resultRef} tabIndex={-1} className="scroll-mt-4 outline-none">
               <ResultView result={result} onNew={reset} />
+            </div>
+          )}
+          {!resultV2 && partialV2 && (
+            <div aria-live="polite">
+              <ResultViewV2 result={partialV2} onNew={reset} />
+            </div>
+          )}
+          {resultV2 && (
+            <div ref={resultRef} tabIndex={-1} className="scroll-mt-4 outline-none">
+              <ResultViewV2 result={resultV2} onNew={reset} />
             </div>
           )}
         </div>

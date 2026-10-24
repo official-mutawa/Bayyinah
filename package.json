@@ -10,7 +10,9 @@
     "ingest": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ingest.ts",
     "ingest:check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/ingest.ts --checks-only",
     "test:questions": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/run.ts",
-    "test:adapters": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/adapters.ts"
+    "test:adapters": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON tests/adapters.ts",
+    "test:v2": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/v2.test.ts",
+    "v2:encrypt": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/v2/encrypt-corpus.ts"
   },
   "dependencies": {
     "next": "16.3.8",

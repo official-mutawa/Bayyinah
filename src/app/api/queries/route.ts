@@ -1,10 +1,13 @@
-// POST /api/queries: step 1 only (question -> 2-3 Arabic search queries), so the browser can
-// search Dorar before the main request. User questions are never stored or logged.
+// POST /api/queries: step 1 only, so the browser can search Dorar before the main request.
+// v1: question -> 2-3 Arabic search queries. v2 (BAYYINAH_PIPELINE=v2): the full question plan,
+// whose hadith queries the browser uses. User questions are never stored or logged.
 
 import { rewriteQuestion } from "@/lib/pipeline";
 import { MAX_QUESTION_LENGTH } from "@/lib/limits";
 import { loadManifest } from "@/lib/corpus";
 import { clientIp, rateLimited } from "@/lib/ratelimit";
+import { pipelineVersion } from "@/lib/v2/config";
+import { plan } from "@/lib/v2/planner";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +26,10 @@ export async function POST(req: Request) {
   if (rateLimited(clientIp(req))) return Response.json({ message: "أسئلة كثيرة في وقت قصير. انتظر دقيقة ثم أعد المحاولة." }, { status: 429 });
   if (loadManifest().length === 0) return Response.json({ message: "لم تُضف المصادر المعتمدة بعد، فلا يمكن البحث الآن." }, { status: 503 });
   try {
+    if (pipelineVersion() === "v2") {
+      const r = await plan(question);
+      return Response.json({ version: "v2", plan: r.plan, queries: r.plan.queries.hadith });
+    }
     return Response.json({ queries: await rewriteQuestion(question) });
   } catch (e) {
     console.error("queries failed", e instanceof Error ? e.name : "unknown");
